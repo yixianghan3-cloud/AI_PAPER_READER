@@ -2,7 +2,7 @@
 # 【4号位接口契约】llm_contract.py
 # 负责人：4号位（大模型 Prompt / DeepSeek 对接）
 # 集成方：1号位
-# 版本：v1.0  冻结日期：待确认
+# 版本：v1.1  冻结日期：待确认
 # ============================================================
 # 规则：
 #   1. 函数名、参数名、返回字段名不可自行修改
@@ -14,19 +14,32 @@
 # ============================================================
 
 
-def summarize_paper(parsed_doc: dict) -> dict:
+def summarize_paper(parsed_doc: dict, lang: str = "zh") -> dict:
     """
     调用 DeepSeek API，对解析后的论文生成结构化摘要与思维导图数据。
 
     Args:
         parsed_doc : parse_pdf() 的完整返回值，包含以下字段：
-                     title, full_text, sections, word_count, parse_method
+                     - title       : str，论文标题
+                     - full_text   : str，论文全文
+                     - sections    : list[dict]，每项格式为：
+                                     {"title": str, "content": str}
+                                     例如 [{"title": "Introduction", "content": "..."}]
+                     - word_count  : int，全文字数
+                     - parse_method: str，解析方式标识
+
+        lang      : 输出语言，默认 "zh"（中文）。
+                    传入 "en" 时，所有文本字段（one_sentence、structured_summary、
+                    keywords、mindmap_markdown）均使用英文输出。
+                    中文论文建议传 "zh"，英文论文建议传 "en"。
 
     Returns:
         dict，结构如下：
 
         {
-            "one_sentence" : str,   # 一句话总结全文，50字以内
+            "one_sentence" : str,   # 一句话总结全文
+                                    # 中文（lang="zh"）：50字以内
+                                    # 英文（lang="en"）：30词以内
             "structured_summary" : {
                 "problem"      : str,  # 研究了什么问题
                 "method"       : str,  # 用了什么方法
@@ -55,8 +68,11 @@ def summarize_paper(parsed_doc: dict) -> dict:
             ## 结论
             - 主要贡献
 
-        - 长文本处理建议采用 Map-Reduce：先分章节摘要，再合并总结
+        - 长文本处理建议采用 Map-Reduce：
+            1. 遍历 parsed_doc["sections"]，逐章节调用 LLM 生成小摘要
+            2. 将所有小摘要拼接后，再次调用 LLM 合并为最终结构化输出
         - 单次调用建议设置 timeout=60 秒
+        - lang 参数不影响返回字段名（字段名始终为英文），仅影响字段值的语言
     """
 
     # ── Mock 实现（1号位占位用，4号位替换此处）──────────────
