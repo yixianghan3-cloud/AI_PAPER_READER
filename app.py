@@ -282,7 +282,7 @@ if not st.session_state.summaries:
     render_landing()
 else:
     # 顶部主标题
-    st.markdown('<h1 class="app-title">论文摘要助手</h1>', unsafe_allow_html=True)
+    st.markdown('<div class="app-title">论文摘要助手</div>', unsafe_allow_html=True)
 
     # 全局指标
     m1, m2, m3, m4 = st.columns(4)

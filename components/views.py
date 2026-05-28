@@ -136,9 +136,9 @@ def render_pdf_iframe(pdf_url: str, height: int = 720, highlight: str = None):
 # ============================================================
 def render_landing():
     """Gemini 极简起始页：大渐变标题 + pill 搜索 + 示例 chips"""
-    # 垂直留白（接近 Gemini 的垂直中线）
-    st.markdown('<div style="height: 8vh;"></div>', unsafe_allow_html=True)
-    st.markdown('<h1 class="hero-title">论文摘要助手</h1>', unsafe_allow_html=True)
+    # 垂直留白（接近 Gemini 的垂直中线，可按屏幕高度微调这个 vh 值）
+    st.markdown('<div style="height: 20vh;"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-title">论文摘要助手</div>', unsafe_allow_html=True)
     st.markdown(
         '<p class="hero-sub">AI 论文研究助手 · 检索 · 解析 · 摘要 · 思维导图</p>',
         unsafe_allow_html=True,
