@@ -127,32 +127,3 @@ def search_papers(query: str, max_results: int = 5) -> list[dict]:
             time.sleep(1)
 
     return papers_list
-
-
-# ============================================================
-# 测试模块
-# ============================================================
-if __name__ == "__main__":
-    print("=== 开始测试 2号位 (v2.1) ===")
-    t0 = time.time()
-    try:
-        results = search_papers("graph neural network", max_results=2)
-        elapsed = time.time() - t0
-
-        for i, res in enumerate(results):
-            print(f"\n--- 第 {i+1} 篇 ---")
-            print(f"标题: {res['title']}")
-            print(f"PDF 本地路径: {res['local_path']}")
-
-            assert os.path.isabs(res['local_path']) or res['local_path'] == "", "路径必须是绝对路径！"
-
-            if res['local_path']:
-                if os.path.exists(res['local_path']):
-                    print("✅ 状态: PDF 文件存在，且路径为绝对路径！")
-                else:
-                    print("❌ 状态: PDF 路径有值，但文件不存在！")
-
-        print(f"\n✅ 全部测试通过 (总耗时 {elapsed:.1f}s)")
-
-    except Exception as e:
-        print(f"\n❌ 测试失败: {e}")
