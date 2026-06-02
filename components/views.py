@@ -20,6 +20,19 @@ from streamlit_echarts import st_echarts
 
 
 # ============================================================
+# 可配置常量
+# ============================================================
+# 起始页示例 chips（用户首次进入时看到的"快速开始"选项）
+# 选取标准：在 arxiv 上结果稳定、关键词清晰、解析容易成功
+LANDING_SAMPLE_CHIPS = [
+    "transformer",
+    "diffusion models",
+    "RAG",
+    "in-context learning",
+]
+
+
+# ============================================================
 # 内部辅助: Markdown -> ECharts Tree 数据
 # ============================================================
 def markdown_to_tree(md: str) -> dict:
@@ -167,10 +180,9 @@ def render_landing():
 
         st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
 
-        # 示例 chips（4 个按钮排成一行）
-        chips = ["transformer", "diffusion models", "RAG", "in-context learning"]
-        chip_cols = st.columns(len(chips))
-        for i, c in enumerate(chips):
+        # 示例 chips（列表定义在文件顶部 LANDING_SAMPLE_CHIPS）
+        chip_cols = st.columns(len(LANDING_SAMPLE_CHIPS))
+        for i, c in enumerate(LANDING_SAMPLE_CHIPS):
             if chip_cols[i].button(c, key=f"chip_{i}", use_container_width=True):
                 st.session_state.query = c
                 st.session_state.run_pipeline = True
