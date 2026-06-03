@@ -3,3 +3,7 @@ __pycache__/
 downloads/
 *.pdf
 .vscode/
+cache/
+.streamlit/secrets.toml
+run.sh
+.env

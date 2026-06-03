@@ -52,6 +52,9 @@ _client = None
 
 
 def _get_client() -> OpenAI:
+    cert_file = os.environ.get("SSL_CERT_FILE")
+    if cert_file and not os.path.exists(cert_file):
+        os.environ.pop("SSL_CERT_FILE", None)
     global _client
     if _client is None:
         api_key = os.environ.get("DEEPSEEK_API_KEY")

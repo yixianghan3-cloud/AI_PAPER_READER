@@ -1,0 +1,8 @@
+# ---- 核心运行 ----
+streamlit>=1.39        # app.py 用了 st.segmented_control,1.39 才有
+streamlit-echarts      # views.py 的思维导图 st_echarts
+openai>=1.0            # DeepSeek 走 openai SDK,需要 v1 的异常类型
+certifi                # search_agent.py 的 SSL 证书
+
+# ---- PDF 解析(重型,见下)----
+mineru
