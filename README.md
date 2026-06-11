@@ -26,7 +26,7 @@
 1. 调 arXiv 检索相关论文并下载 PDF
 2. 用 MinerU 把 PDF 解析成结构化 Markdown
 3. 调 DeepSeek 用 Map-Reduce 生成结构化摘要（问题/方法/结果/贡献）+ 关键词 + 思维导图
-4. 在 Streamlit 界面展示，支持单视图（5 个 tab）与 PDF 对照阅读两种模式
+4. 在 Streamlit 界面展示，支持单视图（4 个 tab）与 PDF 对照阅读两种模式
 
 整条流水线：`search_papers() → parse_pdf() → summarize_paper() → UI 展示`
 
@@ -161,7 +161,7 @@ streamlit run app.py
 
 | 层 | 缓存内容 | 缓存位置 | 效果 |
 |----|---------|---------|------|
-| 检索 | （当前未缓存搜索结果，可后续加） | — | — |
+| 检索 | 论文元数据（按 query+max_results） | `cache/search_*.json` | 命中后跳过 arXiv 请求，秒回且不依赖外网 |
 | 解析 | MinerU 生成的 md | 与 PDF 同目录同名 `.md` | 命中后 parse 从 ~130s/篇 → 0.4s |
 | 摘要 | DeepSeek 结构化输出 | `cache/*.json`（相对启动目录，须从项目根启动） | 命中后秒回 |
 
@@ -210,12 +210,20 @@ CUDA 13 不兼容。
 
 ### 3. arXiv 检索 `read timeout`
 
-**现象**：`RuntimeError: arXiv API 请求失败: The read operation timed out`。
+**现象**：`RuntimeError: arXiv API 请求失败: The read operation timed out`，
+或 `HTTP 429`（限流，共享代理出口 IP 上较常见）。
 
-**原因**：国内网络直连 export.arxiv.org 不稳/不通。**不是限流**（限流是
-HTTP 429）。
+**原因**：国内直连 export.arxiv.org 不稳/不通（超时）；或请求过密 / 共享
+出口 IP 被限流（429）。
 
-**处理**：开全局代理。代理通了就正常。
+**处理**：
+1. 开全局代理（治超时）。
+2. `search_agent.py` v1.1 已内置应对：**超时→快速重试**、**429/5xx→指数退避**、
+   全局 **≥3s 限速**（遵守 arXiv 官方频率要求），偶发抖动可自愈。
+3. **检索结果已落盘缓存**：搜过的词命中 `cache/search_*.json` 直接跳过 arXiv 请求，
+   演示前预热好，当天外网挂了也能出结果。
+4. 可调环境变量：`ARXIV_TIMEOUT`(30) / `ARXIV_MAX_RETRY`(3) / `ARXIV_MIN_INTERVAL`(3) /
+   `ARXIV_SEARCH_CACHE`(1) / `ARXIV_SEARCH_CACHE_TTL`(0=永不过期)。
 
 ### 4. MinerU "正在解析"卡很久但 GPU 不动
 
@@ -326,7 +334,8 @@ git checkout -b feature/batch-parsing
 
 ## 九、待办 / 未来方向
 
-- [ ] 检索结果缓存（按 query 存 json，命中跳过 arXiv 请求，降低对代理的依赖）
+- [x] 检索结果缓存（按 query 存 json，命中跳过 arXiv 请求，降低对代理的依赖）
+      —— ✅ 已实现（v1.1 `search_agent.py`，缓存于 `cache/search_*.json`）
 - [ ] 批处理优化：MinerU 改常驻 api 服务 + 多篇并发，喂满闲置 GPU 算力
       （单篇仅占 ~1G 显存，算力有大量富余；属高风险改动，建议在分支研究）
 - [ ] LLM 多篇/多章节并发，压缩摘要阶段耗时
