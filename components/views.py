@@ -3,7 +3,7 @@
 # ============================================================
 # 三个主 view 函数:
 #   - render_landing()           : Gemini 极简起始页
-#   - render_single_view()       : 单视图详情（5 个 tab）
+#   - render_single_view()       : 单视图详情（4 个 tab）
 #   - render_pdf_compare_view()  : PDF + 摘要 对比视图
 #
 # 以及两个内部渲染辅助:
@@ -190,10 +190,10 @@ def render_landing():
 
 
 # ============================================================
-# 单视图详情（mindmap + 5 tabs）
+# 单视图详情（mindmap + 4 tabs）
 # ============================================================
 def render_single_view(paper, parsed, summ):
-    """完整详情视图：标题、元信息、5 个 tab（摘要/思维导图/关键词/解析后文本/原始 PDF）"""
+    """完整详情视图：标题、元信息、4 个 tab（摘要/思维导图/关键词/原始 PDF）"""
     st.markdown(f"### {paper['title']}")
 
     meta_l, meta_r = st.columns([2, 1])
@@ -216,8 +216,8 @@ def render_single_view(paper, parsed, summ):
 
     st.markdown('<div class="ai-strip"></div>', unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["摘要", "思维导图", "关键词", "解析后文本", "原始 PDF"]
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["摘要", "思维导图", "关键词", "原始 PDF"]
     )
 
     with tab1:
@@ -271,14 +271,6 @@ def render_single_view(paper, parsed, summ):
             st.caption("无关键词")
 
     with tab4:
-        if parsed:
-            for sec in parsed.get("sections", []):
-                st.markdown(f"#### {sec['title']}")
-                st.markdown(sec["content"] or "_(空)_")
-        else:
-            st.warning("解析失败，无原文可显示")
-
-    with tab5:
         kws = summ.get("keywords", [])
         highlight = kws[0] if kws else None
         render_pdf_iframe(paper.get("pdf_url"), height=720, highlight=highlight)
