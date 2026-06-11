@@ -93,12 +93,12 @@ You can now view your Streamlit app in your browser.
 点开**属于你那一行**的链接，注册 / 登录 Tailscale，即可加入同一个 tailnet。
 链接是一次性的、按位号分配，**请认领自己的，不要点别人的**：
 
-| 位号 | 负责人 | 邀请链接 |
-|------|--------|----------|
-| 2 号位 | 张凯诚 | <https://login.tailscale.com/uinv/iGxe8kXxtT11cfTjKK3ZA11> |
-| 3 号位 | 郭瑞超 | <https://login.tailscale.com/uinv/iK6L4z48mB11cfTjKK3ZA11> |
-| 5 号位 | —      | <https://login.tailscale.com/uinv/iGbqmM4AbL11cfTjKK3ZA11> |
-| 4 号位 | —      | ✅ 已加入，无需再点 |
+| 位号 | 邀请链接 |
+|------|----------|
+| 2 号位 | <https://login.tailscale.com/uinv/iGxe8kXxtT11cfTjKK3ZA11> |
+| 3 号位 | <https://login.tailscale.com/uinv/iK6L4z48mB11cfTjKK3ZA11> |
+| 5 号位 | <https://login.tailscale.com/uinv/iGbqmM4AbL11cfTjKK3ZA11> |
+| 4 号位 | ✅ 已加入，无需再点 |
 
 > 链接失效或点错了，找主机方（项目作者）在 [admin 后台](https://login.tailscale.com/admin/users) 重新生成一个。
 
