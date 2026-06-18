@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Paper Reader · 学术论文智能摘要系统</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080c; --bg2:#0e0e16; --card:#13131d; --line:rgba(255,255,255,.07);
+    --ink:#f5f4f9; --mut:#9a98b0; --dim:#6b6a7e;
+    --p1:#7F77DD; --p2:#b06ab3; --p3:#5DCAA5;
+    --grad:linear-gradient(100deg,#7F77DD,#b06ab3 55%,#5DCAA5);
+    --maxw:1180px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--ink);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  svg.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .container{max-width:var(--maxw);margin:0 auto;width:100%}
+  section{padding:100px 48px;position:relative}
+  .alt-bg{background:linear-gradient(180deg,var(--bg),var(--bg2))}
+  .cap{font-size:.8rem;letter-spacing:.26em;color:var(--mut);text-transform:uppercase;margin-bottom:14px}
+
+  .nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;
+       padding:16px 40px;backdrop-filter:blur(18px);background:rgba(8,8,12,.66);border-bottom:1px solid var(--line)}
+  .nav .logo{font-size:1.15rem;font-weight:600;display:flex;align-items:center;gap:8px}
+  .nav .logo svg.ic{font-size:1.3rem;color:var(--p1)}
+  .nav-links{display:flex;gap:28px}
+  .nav-links a{color:var(--mut);text-decoration:none;font-size:.86rem;font-weight:500;transition:color .2s;cursor:pointer}
+  .nav-links a:hover,.nav-links a.active{color:var(--ink)}
+
+  .reveal{opacity:0;transform:translateY(46px) scale(.975);transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+  .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}.d5{transition-delay:.5s}
+  .progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--grad);z-index:200;will-change:width}
+  .scrollcue{display:inline-flex;align-items:center;gap:9px;margin-top:48px;color:var(--mut);font-size:.82rem;letter-spacing:.08em}
+  .scrollcue svg.ic{font-size:1.05rem;animation:bob 1.7s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:rotate(90deg) translateX(0);opacity:.45}50%{transform:rotate(90deg) translateX(6px);opacity:1}}
+
+  .hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;background:var(--bg)}
+  .hero::before,.hero::after{content:"";position:absolute;border-radius:50%;filter:blur(34px);z-index:0;pointer-events:none}
+  .hero::before{width:760px;height:760px;top:-220px;left:46%;
+    background:radial-gradient(circle,rgba(127,119,221,.24),transparent 62%);animation:drift1 16s ease-in-out infinite}
+  .hero::after{width:560px;height:560px;bottom:-180px;right:5%;
+    background:radial-gradient(circle,rgba(93,202,165,.14),transparent 62%);animation:drift2 21s ease-in-out infinite}
+  @keyframes drift1{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-44%,50px)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-34px,-44px)}}
+  .hero .container{position:relative;z-index:1;will-change:transform,opacity}
+  .hero h1{font-size:clamp(2.8rem,6.4vw,5rem);font-weight:600;line-height:1.05;letter-spacing:-.02em}
+  .hero .sub{font-size:clamp(1rem,1.6vw,1.2rem);color:var(--mut);max-width:620px;margin-top:26px;line-height:1.65;font-weight:300}
+  .pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:34px}
+  .pill{display:flex;align-items:center;gap:7px;border:1px solid var(--line);color:#cfccdf;font-size:.84rem;
+        padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.03)}
+  .pill svg.ic{font-size:1.05rem;color:var(--p1)}
+
+  .sec-head{text-align:center;margin-bottom:52px}
+  .sec-head h2{font-size:clamp(1.8rem,3.4vw,2.6rem);font-weight:600;letter-spacing:-.01em}
+  .sub-label{text-align:center;font-size:.82rem;letter-spacing:.2em;color:var(--mut);text-transform:uppercase;margin:0 0 16px}
+
+  .cards-5{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+  .cat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 18px;text-align:center;
+            cursor:pointer;transition:transform .3s,border-color .3s,background .3s;text-decoration:none;color:inherit;display:block}
+  .cat-card:hover{transform:translateY(-6px);border-color:rgba(127,119,221,.55);background:rgba(127,119,221,.08)}
+  .cat-ic{width:46px;height:46px;margin:0 auto 14px;border-radius:13px;background:rgba(127,119,221,.14);
+          display:flex;align-items:center;justify-content:center;color:var(--p1);font-size:1.45rem}
+  .cat-num{font-size:.74rem;color:var(--dim);letter-spacing:.16em;margin-bottom:6px}
+  .cat-title{font-size:1rem;font-weight:600}
+  .cat-en{font-size:.74rem;color:var(--mut);margin-top:3px}
+
+  .flow{text-align:center}
+  .pipe{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0}
+  .node{width:150px;height:150px;border-radius:20px;border:1px solid var(--line);background:var(--card);
+        display:flex;flex-direction:column;justify-content:center;align-items:center;gap:11px;
+        opacity:.35;transform:scale(.93);transition:all .6s cubic-bezier(.2,.7,.2,1)}
+  .node.lit{opacity:1;transform:none;border-color:rgba(127,119,221,.6);
+            box-shadow:0 0 0 1px rgba(127,119,221,.32),0 26px 60px -30px rgba(127,119,221,.85)}
+  .node .nic{font-size:2rem;color:var(--p1)}
+  .node .nm{font-size:1.05rem;font-weight:500}
+  .node .sm{font-size:.78rem;color:var(--mut)}
+  .conn{width:36px;height:2px;background:var(--line);position:relative;overflow:hidden}
+  .conn::after{content:"";position:absolute;inset:0;width:0;background:linear-gradient(90deg,var(--p1),var(--p3));transition:width .5s ease}
+  .conn.lit::after{width:100%}
+
+  .perf{text-align:center}
+  .perf .lead{color:var(--mut);max-width:600px;margin:0 auto 48px;font-weight:300;font-size:1.05rem;line-height:1.6}
+  .stats{display:flex;gap:clamp(28px,6vw,80px);justify-content:center;align-items:flex-end;flex-wrap:wrap}
+  .stat .big{font-size:clamp(3rem,7vw,5rem);font-weight:600;line-height:1;letter-spacing:-.03em}
+  .stat .lbl{margin-top:14px;color:var(--mut);font-size:.86rem}
+  .arrowbig{color:var(--dim);font-size:1.7rem;padding-bottom:26px}
+
+  .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:22px;
+        transition:transform .4s cubic-bezier(.16,1,.3,1),border-color .4s,background .4s}
+  .card:hover{transform:translateY(-5px);border-color:rgba(127,119,221,.42);background:rgba(127,119,221,.05)}
+  .card .cic{width:42px;height:42px;border-radius:11px;background:rgba(127,119,221,.14);color:var(--p1);
+             display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:14px}
+  .card h4{font-size:1rem;font-weight:600;margin-bottom:10px}
+  .card .desc{font-size:.84rem;color:var(--mut);line-height:1.6}
+  .bullets{list-style:none;font-size:.85rem;color:#c4c2d4;line-height:1.5}
+  .bullets li{display:flex;gap:9px;margin-bottom:10px;align-items:flex-start}
+  .bullets li svg.ic{font-size:1rem;color:var(--p3);flex-shrink:0;margin-top:3px}
+
+  .metrics{display:flex;justify-content:center;gap:clamp(20px,5vw,56px);flex-wrap:wrap;margin-top:36px;
+           padding-top:30px;border-top:1px solid var(--line)}
+  .metric{text-align:center;transition:transform .4s cubic-bezier(.16,1,.3,1)}
+  .metric:hover{transform:translateY(-4px)}
+  .metric .v{font-size:1.9rem;font-weight:700;color:var(--p1)}
+  .metric .k{font-size:.78rem;color:var(--mut);margin-top:6px}
+
+  .closing{text-align:center;margin-top:44px;padding-top:32px;border-top:1px solid var(--line)}
+  .closing .slogan{font-size:1.4rem;font-weight:600;margin-bottom:10px}
+  .closing .team{color:var(--mut);font-size:.86rem}
+  .closing .tag{color:var(--dim);font-size:.78rem;margin-top:10px;letter-spacing:.1em}
+  .footer{text-align:center;padding:34px;color:var(--dim);font-size:.76rem;border-top:1px solid var(--line)}
+
+  @media(max-width:980px){.pipe{flex-direction:column}.conn{width:2px;height:28px;transform:none}}
+  @media(max-width:920px){.cards-5,.g5{grid-template-columns:repeat(2,1fr)}.g3,.g4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:760px){
+    section{padding:66px 22px}
+    .g2,.g3,.g4,.g5,.cards-5{grid-template-columns:1fr}
+    .nav-links{gap:15px}.nav{padding:12px 18px}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 7v13"/><path d="M4 5h5a3 3 0 0 1 3 3v12a2.5 2.5 0 0 0-2.5-2H4z"/><path d="M20 5h-5a3 3 0 0 0-3 3v12a2.5 2.5 0 0 1 2.5-2H20z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></symbol>
+  <symbol id="i-fork" viewBox="0 0 24 24"><circle cx="12" cy="18.5" r="2.3"/><circle cx="6" cy="5.5" r="2.3"/><circle cx="18" cy="5.5" r="2.3"/><path d="M6 7.8v2a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-2"/><path d="M12 12.8v3.4"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.3 1 2.5h6c0-1.2.2-1.7 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.2"/><rect x="13" y="3" width="8" height="8" rx="1.2"/><rect x="3" y="13" width="8" height="8" rx="1.2"/><rect x="13" y="13" width="8" height="8" rx="1.2"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-present" viewBox="0 0 24 24"><path d="M3 4h18"/><path d="M4 4v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4"/><path d="M12 16v4"/><path d="M9 20h6"/><path d="m10.5 8.5 3.5 2-3.5 2z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-chevr" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 16h.01"/></symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M12 3c3 2.2 4.5 5.5 4.5 9l-1.8 2.7H9.3L7.5 12c0-3.5 1.5-6.8 4.5-9z"/><path d="M9.3 14.7 7 17M14.7 14.7 17 17"/><path d="M9 18c-1 1-1.3 3-1.3 3s2-.3 3-1.3"/><circle cx="12" cy="9" r="1.4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11 3l1.7 4.8L17.5 9.5l-4.8 1.7L11 16l-1.7-4.8L4.5 9.5l4.8-1.7z"/><path d="M18.5 14.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M10 3v6l-4.6 8.3A1.5 1.5 0 0 0 6.7 20h10.6a1.5 1.5 0 0 0 1.3-2.7L14 9V3"/><path d="M7.5 15h9"/></symbol>
+  <symbol id="i-tags" viewBox="0 0 24 24"><path d="M3 4v6.5L12.5 20l7.5-7.5L10.5 3H4a1 1 0 0 0-1 1z"/><circle cx="7.5" cy="7.5" r="1.3"/></symbol>
+  <symbol id="i-cap" viewBox="0 0 24 24"><path d="M2 9l10-4 10 4-10 4z"/><path d="M6 11v5c0 1.3 2.7 3 6 3s6-1.7 6-3v-5"/><path d="M22 9v5"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v17"/><path d="M14 9h4a1 1 0 0 1 1 1v11"/><path d="M3 21h18"/><path d="M8 7h2M8 11h2M8 15h2"/></symbol>
+  <symbol id="i-lang" viewBox="0 0 24 24"><path d="M4 5h7"/><path d="M7.5 5c0 3.5-2 6.5-4.5 8"/><path d="M5 9.5c0 2 2 4.2 5 5.3"/><path d="M12 20l4-9 4 9"/><path d="M13.4 17h5.2"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M15.5 3.5a4.5 4.5 0 0 0-1.4 7.6L5 20.2 6.8 22l9.1-9.1a4.5 4.5 0 0 0 5.6-5.6l-2.7 2.7-2.8-.7-.7-2.8z"/></symbol>
+</defs></svg>
+
+<div class="progress" id="progress"></div>
+
+<nav class="nav">
+  <div class="logo"><svg class="ic"><use href="#i-book"/></svg><span>AI Paper Reader</span></div>
+  <div class="nav-links">
+    <a class="nav-a" href="#hero">首页</a>
+    <a class="nav-a" href="#catalogue">目录</a>
+    <a class="nav-a" href="#s2">架构</a>
+    <a class="nav-a" href="#perf">性能</a>
+    <a class="nav-a" href="#s5">总结</a>
+  </div>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="container">
+    <div class="cap reveal">AI Paper Reader</div>
+    <h1 class="reveal d1">读论文，<span class="grad">从一下午到一分钟</span></h1>
+    <p class="sub reveal d2">输入一个关键词，自动完成检索 · 解析 · 摘要 · 思维导图。<br>一站式学术论文速读系统。</p>
+    <div class="pills reveal d3">
+      <span class="pill"><svg class="ic"><use href="#i-search"/></svg>arXiv 检索</span>
+      <span class="pill"><svg class="ic"><use href="#i-file"/></svg>MinerU 解析</span>
+      <span class="pill"><svg class="ic"><use href="#i-cpu"/></svg>DeepSeek 摘要</span>
+      <span class="pill"><svg class="ic"><use href="#i-fork"/></svg>思维导图</span>
+    </div>
+    <div class="scrollcue reveal d4"><svg class="ic"><use href="#i-chevr"/></svg>向下滚动，开始探索</div>
+  </div>
+</section>
+
+<section id="catalogue">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">目录</div><h2 class="reveal d1">Contents</h2></div>
+    <div class="cards-5">
+      <a class="cat-card reveal" href="#s1"><div class="cat-ic"><svg class="ic"><use href="#i-bulb"/></svg></div><div class="cat-num">01</div><div class="cat-title">背景介绍</div><div class="cat-en">Why</div></a>
+      <a class="cat-card reveal d1" href="#s2"><div class="cat-ic"><svg class="ic"><use href="#i-grid"/></svg></div><div class="cat-num">02</div><div class="cat-title">系统架构</div><div class="cat-en">How</div></a>
+      <a class="cat-card reveal d2" href="#s3"><div class="cat-ic"><svg class="ic"><use href="#i-zap"/></svg></div><div class="cat-num">03</div><div class="cat-title">技术亮点</div><div class="cat-en">Wow</div></a>
+      <a class="cat-card reveal d3" href="#s4"><div class="cat-ic"><svg class="ic"><use href="#i-present"/></svg></div><div class="cat-num">04</div><div class="cat-title">功能展示</div><div class="cat-en">Watch</div></a>
+      <a class="cat-card reveal d4" href="#s5"><div class="cat-ic"><svg class="ic"><use href="#i-flag"/></svg></div><div class="cat-num">05</div><div class="cat-title">结果总结</div><div class="cat-en">Future</div></a>
+    </div>
+  </div>
+</section>
+
+<!-- 01 背景 -->
+<section id="s1">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">01 · 背景介绍</div><h2 class="reveal d1">痛点与机遇</h2></div>
+    <div class="g2">
+      <div class="card reveal">
+        <div class="cic"><svg class="ic"><use href="#i-alert"/></svg></div>
+        <h4>痛点：信息过载</h4>
+        <ul class="bullets">
+          <li><svg class="ic"><use href="#i-dot"/></svg>arXiv 每年新增论文超 10 万篇</li>
+          <li><svg class="ic"><use href="#i-dot"/></svg>精读一篇平均需 30–60 分钟</li>
+          <li><svg class="ic"><use href="#i-dot"/></svg>人工筛选费时，拖慢科研节奏</li>
+        </ul>
+      </div>
+      <div class="card reveal d2">
+        <div class="cic"><svg class="ic"><use href="#i-rocket"/></svg></div>
+        <h4>机遇：LLM 自动化</h4>
+        <ul class="bullets">
+          <li><svg class="ic"><use href="#i-check"/></svg>DeepSeek 等大模型擅长理解与摘要</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>arXiv 开放 API + PDF 解析工具成熟</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>关键词进、摘要出：30 分钟 → 10 秒</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 架构 -->
+<section id="s2" class="alt-bg">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">02 · 系统架构</div><h2 class="reveal d1">五大模块，契约驱动</h2></div>
+    <div class="g5">
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-search"/></svg></div><h4>智能检索</h4><div class="desc">自然语言/中文经 LLM 改写，OpenAlex 按引用选题，arXiv 取全文。</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h4>PDF 解析</h4><div class="desc">MinerU 转结构化 Markdown，识别章节、清理页眉脚。</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-cpu"/></svg></div><h4>AI 摘要</h4><div class="desc">DeepSeek + Map-Reduce，结构化摘要、关键词、导图。</div></div>
+      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h4>前端可视化</h4><div class="desc">Streamlit 多视图：摘要、导图、关键词、PDF 对照。</div></div>
+      <div class="card reveal d4"><div class="cic"><svg class="ic"><use href="#i-flask"/></svg></div><h4>测试评估</h4><div class="desc">ROUGE 评分、耗时与成功率，自动生成海报。</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 工作流 -->
+<section class="flow" id="flow">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">工作流</div><h2 class="reveal d1">五步，全自动</h2></div>
+    <div class="pipe">
+      <div class="node" data-step><span class="nic"><svg class="ic"><use href="#i-sparkles"/></svg></span><div class="nm">理解</div><div class="sm">自然语言→关键词</div></div>
+      <div class="conn" data-conn></div>
+      <div class="node" data-step><span class="nic"><svg class="ic"><use href="#i-search"/></svg></span><div class="nm">检索</div><div class="sm">OpenAlex + arXiv</div></div>
+      <div class="conn" data-conn></div>
+      <div class="node" data-step><span class="nic"><svg class="ic"><use href="#i-file"/></svg></span><div class="nm">解析</div><div class="sm">PDF → 结构化</div></div>
+      <div class="conn" data-conn></div>
+      <div class="node" data-step><span class="nic"><svg class="ic"><use href="#i-cpu"/></svg></span><div class="nm">摘要</div><div class="sm">Map-Reduce</div></div>
+      <div class="conn" data-conn></div>
+      <div class="node" data-step><span class="nic"><svg class="ic"><use href="#i-grid"/></svg></span><div class="nm">展示</div><div class="sm">4 视图 + 导图</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 技术亮点 -->
+<section id="s3">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">03 · 技术亮点</div><h2 class="reveal d1">三层缓存 · 模块解耦 · 双语可视化</h2></div>
+    <div class="g3">
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-zap"/></svg></div><h4>极致性能</h4><div class="desc">解析 / 摘要 / 检索三层落盘缓存，单篇首解析约 90 秒，命中缓存后 0.4 秒返回，提速 200×。</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h4>模块解耦</h4><div class="desc">五模块按接口契约设计，各带 USE_MOCK 开关可独立测试，团队并行开发互不阻塞。</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-sparkles"/></svg></div><h4>双语可视化</h4><div class="desc">结构化摘要 + 可交互思维导图，中英双语输出，论文重点一目了然。</div></div>
+    </div>
+    <div class="metrics reveal d2">
+      <div class="metric"><div class="v">100%</div><div class="k">搜索成功率</div></div>
+      <div class="metric"><div class="v">90s→0.4s</div><div class="k">解析加速比</div></div>
+      <div class="metric"><div class="v">0.42–0.56</div><div class="k">ROUGE-L 质量</div></div>
+      <div class="metric"><div class="v">86%</div><div class="k">章节识别准确率</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 性能 -->
+<section class="perf alt-bg" id="perf">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">性能</div><h2 class="reveal d1">三层缓存，<span class="grad">算过不重算</span></h2></div>
+    <p class="lead reveal d2">检索、解析、摘要每层都落盘缓存。冷启动慢，热启动近乎瞬时。</p>
+    <div class="stats">
+      <div class="stat reveal d2"><div class="big grad" data-count="9" data-suffix=" min">0 min</div><div class="lbl">冷启动 · 3 篇论文</div></div>
+      <div class="arrowbig reveal d3"><svg class="ic"><use href="#i-arrow"/></svg></div>
+      <div class="stat reveal d3"><div class="big grad" data-count="0.4" data-suffix=" s" data-dec="1">0 s</div><div class="lbl">热启动 · 命中缓存</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 功能展示 -->
+<section id="s4">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">04 · 功能展示</div><h2 class="reveal d1">四大视图，一屏读懂一篇论文</h2></div>
+    <div class="g4">
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h4>结构化摘要</h4><div class="desc">一句话总结 + 问题 / 方法 / 结果 / 贡献 四维拆解</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-fork"/></svg></div><h4>思维导图</h4><div class="desc">可交互导图，拖拽缩放、折叠展开，脉络一目了然</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-tags"/></svg></div><h4>关键词</h4><div class="desc">自动抽取 3–5 个核心关键词，快速定位主题</div></div>
+      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-book"/></svg></div><h4>原文对照</h4><div class="desc">摘要与原始 PDF 并排，结论可随时回原文核对</div></div>
+    </div>
+    <p class="sub-label reveal" style="margin-top:44px">应用场景</p>
+    <div class="g4">
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-cap"/></svg></div><h4>科研调研</h4><div class="desc">调研周期从数周压缩到数天</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-pen"/></svg></div><h4>课程写作</h4><div class="desc">文献综述效率提升 3 倍</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-building"/></svg></div><h4>技术跟进</h4><div class="desc">10 分钟浏览一周前沿</div></div>
+      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-lang"/></svg></div><h4>跨语言合作</h4><div class="desc">中英双语输出，降低语言门槛</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 总结 -->
+<section id="s5" class="alt-bg">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">05 · 结果总结</div><h2 class="reveal d1">实验结果与后续计划</h2></div>
+    <div class="g2">
+      <div class="card reveal">
+        <div class="cic"><svg class="ic"><use href="#i-check"/></svg></div>
+        <h4>实验结果</h4>
+        <ul class="bullets">
+          <li><svg class="ic"><use href="#i-check"/></svg>高效：热启动 &lt; 0.5 秒，三层缓存支撑</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>智能检索：支持自然语言 / 中文，OpenAlex 按引用选题</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>易用：零安装，浏览器即可访问</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>可扩展：模块化解耦，便于迭代</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>实用：覆盖科研 / 学习 / 技术跟进</li>
+        </ul>
+      </div>
+      <div class="card reveal d2">
+        <div class="cic"><svg class="ic"><use href="#i-wrench"/></svg></div>
+        <h4>问题与改进方向</h4>
+        <ul class="bullets">
+          <li><svg class="ic"><use href="#i-arrow"/></svg>解析失败 → 升级配置 + 格式兜底</li>
+          <li><svg class="ic"><use href="#i-arrow"/></svg>冷启动慢 → 预热常用关键词缓存</li>
+          <li><svg class="ic"><use href="#i-arrow"/></svg>摘要串行 → Map 阶段并发，进一步提速</li>
+          <li><svg class="ic"><use href="#i-arrow"/></svg>摘要偶漏要点 → 优化章节权重</li>
+        </ul>
+      </div>
+    </div>
+    <div class="closing reveal d2">
+      <p class="slogan grad">智汇文献，思启新篇</p>
+      <p class="team">人工智能 39 组 · 阚祎翔　常轶超　张凯诚　郭瑞超　任子渊</p>
+      <p class="tag">高效 · 全面 · 智能 · 稳定</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">AI Paper Reader · 学术论文智能摘要系统　|　第二届人工智能导报海报展 · 2026.06 青岛</footer>
+
+<script>
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  const flow=document.getElementById('flow');
+  const fio=new IntersectionObserver((es)=>es.forEach(e=>{if(!e.isIntersecting)return;
+    const ns=flow.querySelectorAll('[data-step]'),cs=flow.querySelectorAll('[data-conn]');
+    ns.forEach((n,i)=>setTimeout(()=>{n.classList.add('lit');if(cs[i-1])cs[i-1].classList.add('lit');},260*i+200));
+    fio.unobserve(e.target);}),{threshold:.4});
+  fio.observe(flow);
+
+  const cio=new IntersectionObserver((es)=>es.forEach(e=>{if(!e.isIntersecting)return;
+    const dec=+e.target.dataset.dec||0,end=+e.target.dataset.count,suf=e.target.dataset.suffix||"";
+    const t0=performance.now(),dur=1100;
+    const tick=(t)=>{let p=Math.min((t-t0)/dur,1);p=1-Math.pow(1-p,3);
+      e.target.textContent=(end*p).toFixed(dec)+suf;if(p<1)requestAnimationFrame(tick);};
+    requestAnimationFrame(tick);cio.unobserve(e.target);}),{threshold:.6});
+  document.querySelectorAll('[data-count]').forEach(el=>cio.observe(el));
+
+  const navLinks=[...document.querySelectorAll('.nav-a')];
+  const spyIds=['hero','catalogue','s2','perf','s5'];
+  const secs=spyIds.map(id=>document.getElementById(id));
+  const sio=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){
+    navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id));}}),{threshold:.4});
+  secs.forEach(s=>s&&sio.observe(s));
+
+  const prog=document.getElementById('progress');
+  const heroInner=document.querySelector('.hero .container');
+  let ticking=false;
+  function onScroll(){
+    const h=document.documentElement, max=h.scrollHeight-h.clientHeight, y=window.scrollY;
+    prog.style.width=(max>0?(y/max*100):0)+'%';
+    if(heroInner){
+      if(y<window.innerHeight){
+        heroInner.style.transform='translateY('+(y*0.22)+'px)';
+        heroInner.style.opacity=String(Math.max(0,1-y/(window.innerHeight*0.72)));
+      }else{heroInner.style.opacity='0';}
+    }
+    ticking=false;
+  }
+  window.addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(onScroll);ticking=true;}},{passive:true});
+  onScroll();
+</script>
+</body>
+</html>
