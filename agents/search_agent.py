@@ -29,6 +29,20 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import shutil
 
+# 可选扩展模块（容错 import：模块缺失/出错都不影响纯 arXiv 主流程）
+try:
+    from agents.openalex_agent import openalex_search
+except Exception:
+    openalex_search = None
+try:
+    from agents.semantic_agent import semantic_search
+except Exception:
+    semantic_search = None
+try:
+    from agents.query_rewriter import rewrite_query
+except Exception:
+    rewrite_query = None
+
 # ── 可配置项（环境变量可覆盖）──────────────────────────────
 ARXIV_TIMEOUT      = int(os.environ.get("ARXIV_TIMEOUT", "30"))         # API 请求超时（秒）
 ARXIV_PDF_TIMEOUT  = int(os.environ.get("ARXIV_PDF_TIMEOUT", "30"))     # PDF 下载超时（秒）
@@ -37,6 +51,11 @@ ARXIV_MIN_INTERVAL = float(os.environ.get("ARXIV_MIN_INTERVAL", "3.0")) # 两次
 ARXIV_RETRY_BASE   = float(os.environ.get("ARXIV_RETRY_BASE", "3.0"))   # 退避基数（秒）
 SEARCH_CACHE       = os.environ.get("ARXIV_SEARCH_CACHE", "1") != "0"   # 检索缓存开关
 SEARCH_CACHE_TTL   = int(os.environ.get("ARXIV_SEARCH_CACHE_TTL", "0")) # 缓存有效期（秒），0 = 永不过期
+
+# ── 检索增强开关（默认关，保持纯 arXiv 行为；按需逐步启用）──────
+USE_OPENALEX       = os.environ.get("USE_OPENALEX", "0") != "0"      # 1=用 OpenAlex 检索（S2 免审批平替，推荐）
+USE_SEMANTIC       = os.environ.get("USE_SEMANTIC", "0") != "0"      # 1=用 Semantic Scholar 检索（需 key）
+USE_QUERY_REWRITE  = os.environ.get("USE_QUERY_REWRITE", "0") != "0" # 1=检索前用 LLM 改写自然语言
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _CACHE_DIR    = _PROJECT_ROOT / "cache"
@@ -66,16 +85,18 @@ def _respect_rate_limit():
 # ─────────────────────────────────────────────────────────────
 # 检索结果缓存（按 query + max_results）
 # ─────────────────────────────────────────────────────────────
-def _search_cache_path(query: str, max_results: int) -> Path:
-    raw = f"{query.strip().lower()}|{max_results}".encode("utf-8")
-    return _CACHE_DIR / f"search_{hashlib.md5(raw).hexdigest()}.json"
+def _search_cache_path(query: str, max_results: int, source: str = "arxiv") -> Path:
+    base = f"{query.strip().lower()}|{max_results}"
+    if source != "arxiv":                       # arxiv 不加前缀，兼容已有缓存文件
+        base = f"{source}|{base}"
+    return _CACHE_DIR / f"search_{hashlib.md5(base.encode('utf-8')).hexdigest()}.json"
 
 
-def _load_search_cache(query: str, max_results: int):
+def _load_search_cache(query: str, max_results: int, source: str = "arxiv"):
     """命中且有效则返回论文元数据列表；否则返回 None。"""
     if not SEARCH_CACHE:
         return None
-    p = _search_cache_path(query, max_results)
+    p = _search_cache_path(query, max_results, source)
     if not p.exists():
         return None
     try:
@@ -88,13 +109,13 @@ def _load_search_cache(query: str, max_results: int):
         return None   # 缓存损坏当作未命中
 
 
-def _save_search_cache(query: str, max_results: int, meta_list: list) -> None:
+def _save_search_cache(query: str, max_results: int, meta_list: list, source: str = "arxiv") -> None:
     """把论文元数据列表写入缓存（尽力而为，写失败不影响主流程）。"""
     if not SEARCH_CACHE:
         return
     try:
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        with open(_search_cache_path(query, max_results), "w", encoding="utf-8") as f:
+        with open(_search_cache_path(query, max_results, source), "w", encoding="utf-8") as f:
             json.dump(meta_list, f, ensure_ascii=False, indent=2)
     except OSError:
         pass
@@ -239,19 +260,38 @@ def search_papers(query: str, max_results: int = 5) -> list[dict]:
     download_dir = _PROJECT_ROOT / "downloads"
     download_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. 先查检索缓存：命中则跳过 arXiv API（最易超时/限流的一步）
-    meta_list = _load_search_cache(query, max_results)
+    # 0. 查询改写（可选）：自然语言 → 英文检索词。失败自动回退原文，不阻断。
+    if USE_QUERY_REWRITE and rewrite_query:
+        rewritten = rewrite_query(query)
+        if rewritten and rewritten.strip() and rewritten != query:
+            print(f"[2号位日志] 查询改写：{query!r} → {rewritten!r}")
+            query = rewritten
+
+    # 检索来源优先级：OpenAlex（推荐）> Semantic Scholar > arXiv
+    use_oa = USE_OPENALEX and (openalex_search is not None)
+    use_s2 = (not use_oa) and USE_SEMANTIC and (semantic_search is not None)
+    source = "oa" if use_oa else ("s2" if use_s2 else "arxiv")
+
+    # 1. 先查检索缓存：命中则跳过 API 请求（最易超时/限流的一步）
+    meta_list = _load_search_cache(query, max_results, source)
     if meta_list is not None:
-        print(f"[2号位日志] 命中检索缓存: {query}（{len(meta_list)} 篇，跳过 arXiv 请求）")
+        print(f"[2号位日志] 命中检索缓存[{source}]: {query}（{len(meta_list)} 篇）")
     else:
-        terms = query.strip().split()
-        search_query = "+AND+".join(f"all:{urllib.parse.quote(t)}" for t in terms)
-        url = f"{_API_BASE}?search_query={search_query}&start=0&max_results={max_results}"
-        print(f"[2号位日志] 正在搜索 arXiv: {query}")
-        xml_data = _fetch_arxiv(url)
-        meta_list = _parse_entries(xml_data)
+        if use_oa:
+            # OpenAlex 选题 + 引用排序；PDF 仍优先走下方 arXiv 下载（meta 已带 pdf_url）
+            meta_list = openalex_search(query, max_results)
+        elif use_s2:
+            # S2 选题 + 引用排序；PDF 仍优先走下方 arXiv 下载（meta 已带 pdf_url）
+            meta_list = semantic_search(query, max_results)
+        else:
+            terms = query.strip().split()
+            search_query = "+AND+".join(f"all:{urllib.parse.quote(t)}" for t in terms)
+            url = f"{_API_BASE}?search_query={search_query}&start=0&max_results={max_results}"
+            print(f"[2号位日志] 正在搜索 arXiv: {query}")
+            xml_data = _fetch_arxiv(url)
+            meta_list = _parse_entries(xml_data)
         if meta_list:
-            _save_search_cache(query, max_results, meta_list)
+            _save_search_cache(query, max_results, meta_list, source)
 
     if not meta_list:
         print("[2号位日志] 未搜索到相关论文。")
@@ -269,7 +309,7 @@ def search_papers(query: str, max_results: int = 5) -> list[dict]:
             "abstract": meta["abstract"],
             "pdf_url": meta["pdf_url"],
             "local_path": local_path_str,
-            "source": "arxiv",
+            "source": meta.get("source", "arxiv"),
         })
 
     return papers_list
