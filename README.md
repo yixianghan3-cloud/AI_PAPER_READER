@@ -336,6 +336,10 @@ git checkout -b feature/batch-parsing
 
 - [x] 检索结果缓存（按 query 存 json，命中跳过 arXiv 请求，降低对代理的依赖）
       —— ✅ 已实现（v1.1 `search_agent.py`，缓存于 `cache/search_*.json`）
+- [x] 检索增强：Query Rewriter（自然语言/中文→英文检索词）+ OpenAlex 选题（引用排序）
+      —— ✅ 可用（`agents/query_rewriter.py`、`agents/openalex_agent.py`，环境变量
+      `USE_QUERY_REWRITE` / `USE_OPENALEX` / `OPENALEX_MAILTO`，默认关=纯 arXiv）。
+      S2 版 `agents/semantic_agent.py` 保留为可选后备。详见 [IMPROVEMENTS.md](IMPROVEMENTS.md) 第 2 节
 - [ ] 批处理优化：MinerU 改常驻 api 服务 + 多篇并发，喂满闲置 GPU 算力
       （单篇仅占 ~1G 显存，算力有大量富余；属高风险改动，建议在分支研究）
 - [ ] LLM 多篇/多章节并发，压缩摘要阶段耗时
