@@ -26,7 +26,8 @@ USE_MOCK = False   # demo 兜底 / MinerU 未装时改 True
 
 if not USE_MOCK:
     # 真实实现：3号位的 agents/pdf_parser.py（基于 MinerU）
-    from agents.pdf_parser import parse_pdf   # noqa: F401
+    # parse_pdfs：批量解析（一次 MinerU 调用解析多篇，模型只装载一次）
+    from agents.pdf_parser import parse_pdf, parse_pdfs   # noqa: F401
 
 else:
     def parse_pdf(local_path: str) -> dict:
@@ -122,3 +123,13 @@ else:
             "parse_method" : "mock",
         }
         # ── Mock 结束 ─────────────────────────────────────────────
+
+    def parse_pdfs(local_paths: list) -> list:
+        """Mock 批量：逐个调用 parse_pdf；失败项返回 None，不打断其它。"""
+        out = []
+        for p in local_paths:
+            try:
+                out.append(parse_pdf(p))
+            except Exception:
+                out.append(None)
+        return out

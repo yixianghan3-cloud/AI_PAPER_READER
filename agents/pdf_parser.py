@@ -105,24 +105,70 @@ def parse_pdf(local_path: str) -> dict:
         _write_cache(local_path, raw_md)   # 尽力而为，写失败不影响解析
         parse_method = "mineru"
 
-    # 3. 清理 markdown（去掉失效图片链接、压缩多余空行）
-    full_text = _clean_markdown(raw_md)
-    if not full_text.strip():
+    # 3~5. 清理 / 拆章节 / 计字数（与批量解析共用同一段后处理）
+    doc = _assemble_doc(raw_md, parse_method)
+    if doc is None:
         raise Exception("PDF 解析失败：清理后正文为空")
+    return doc
 
-    # 4. 提取标题 + 拆分章节
+
+# ─────────────────────────────────────────────────────────────
+# 共享后处理：raw md → 契约 dict（正文为空返回 None，由调用方决定抛错或跳过）
+# ─────────────────────────────────────────────────────────────
+def _assemble_doc(raw_md: str, parse_method: str):
+    full_text = _clean_markdown(raw_md or "")
+    if not full_text.strip():
+        return None
     title, sections = _split_sections(full_text)
-
-    # 5. 计算字数
-    word_count = _count_words(full_text)
-
     return {
         "title": title,
         "full_text": full_text,
         "sections": sections,
-        "word_count": word_count,
+        "word_count": _count_words(full_text),
         "parse_method": parse_method,
     }
+
+
+# ─────────────────────────────────────────────────────────────
+# 批量解析：多个 PDF 合并为「一次 MinerU 调用」（目录模式），模型只装一次。
+#   - 命中 md 缓存的直接复用，不进批
+#   - 批量失败时自动回退「逐篇 parse_pdf」，保证健壮性
+#   - 返回与输入等长的 list；单篇失败该项为 None（不影响其它篇）
+# ─────────────────────────────────────────────────────────────
+def parse_pdfs(local_paths: list) -> list:
+    results = [None] * len(local_paths)
+    todo = []   # [(idx, path)]
+    for i, p in enumerate(local_paths):
+        if not p or not os.path.exists(p):
+            continue                                  # 该项保持 None
+        cached = _read_cache(p)
+        if cached:
+            results[i] = _assemble_doc(cached, "mineru-cache")
+        else:
+            todo.append((i, p))
+
+    if not todo:
+        return results
+
+    timeout = MINERU_TIMEOUT * len(todo)              # 批量超时按篇数放宽
+    try:
+        md_list = _run_mineru_batch([p for _, p in todo], timeout=timeout)
+    except Exception as e:
+        # 批量整体失败 → 回退逐篇（沿用稳的单篇路径，单篇失败不拖累其它）
+        print(f"[3号位日志] 批量解析失败，回退逐篇：{e}")
+        for i, p in todo:
+            try:
+                results[i] = parse_pdf(p)
+            except Exception as ee:
+                print(f"[3号位日志] 单篇解析失败：{p} | {ee}")
+        return results
+
+    for (i, p), md in zip(todo, md_list):
+        if md and md.strip():
+            _write_cache(p, md)
+            results[i] = _assemble_doc(md, "mineru")
+        # md 为空 → 该项保持 None（该篇没产出，单篇失败不影响整体）
+    return results
 
 
 # ─────────────────────────────────────────────────────────────
@@ -244,6 +290,55 @@ def _run_mineru(local_path: str, timeout: int = 300) -> str:
         if not text:
             raise Exception("PDF 解析失败：MinerU 生成的 .md 为空")
         return text
+
+
+def _run_mineru_batch(local_paths: list, timeout: int) -> list:
+    """
+    一次 MinerU 调用解析多个 PDF（目录模式，模型只装载一次）。
+    返回与 local_paths 等长的 md 文本列表；某篇无产出则该项为 ""。
+
+    实现：把目标 PDF 以安全唯一名 doc{idx}.pdf 暂存到临时目录，规避空格 /
+    Unicode 路径问题，并便于按 idx 精确回映射 MinerU 的嵌套输出。
+    """
+    import shutil
+    if not local_paths:
+        return []
+
+    with tempfile.TemporaryDirectory() as stage, tempfile.TemporaryDirectory() as out:
+        for idx, src in enumerate(local_paths):
+            shutil.copyfile(src, os.path.join(stage, f"doc{idx}.pdf"))
+
+        cmd = ["mineru", "-p", stage, "-o", out, "-m", "auto", "-b", MINERU_BACKEND]
+        env = _build_mineru_env()
+
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True,
+                encoding="utf-8", errors="replace", env=env, timeout=timeout,
+            )
+        except FileNotFoundError:
+            raise Exception("未找到 mineru 命令，请确认已安装 MinerU（pip install mineru）")
+        except subprocess.TimeoutExpired:
+            raise Exception(f"PDF 批量解析失败：MinerU 执行超时（超过 {timeout} 秒）")
+
+        if result.returncode != 0:
+            stderr = (result.stderr or "").strip()
+            raise Exception(f"PDF 批量解析失败：MinerU 退出码非 0：{stderr[:2000]}")
+
+        # 回映射：out/doc{idx}/**/*.md，取体积最大的那个
+        md_texts = []
+        for idx in range(len(local_paths)):
+            md_files = glob.glob(os.path.join(out, f"doc{idx}", "**", "*.md"), recursive=True)
+            if not md_files:
+                md_texts.append("")
+                continue
+            md_file = max(md_files, key=os.path.getsize)
+            try:
+                with open(md_file, "r", encoding="utf-8", errors="replace") as f:
+                    md_texts.append(f.read().strip())
+            except OSError:
+                md_texts.append("")
+        return md_texts
 
 
 # ─────────────────────────────────────────────────────────────

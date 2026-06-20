@@ -70,17 +70,25 @@ def _call_deepseek(
     use_json_mode: bool = False,
     max_tokens: int = 2048,
     temperature: float = TEMPERATURE,
+    system: str = None,
 ) -> str:
     """
     基础封装：调用 DeepSeek API，返回纯文本响应（保证非空）。
     内置重试机制；限流走指数退避，鉴权失败立即抛错不重试。
     use_json_mode=True 时启用 DeepSeek 原生 JSON 模式。
+    system: 可选系统提示词（角色/规则/语气）；传入则置于消息最前，
+            与用户内容分离，让指令更稳定、更不易被正文带偏。
     """
     client = _get_client()
 
+    messages = []
+    if system and system.strip():
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
     kwargs = {
         "model"      : MODEL_NAME,
-        "messages"   : [{"role": "user", "content": prompt}],
+        "messages"   : messages,
         "max_tokens" : max_tokens,
         "temperature": temperature,
     }
@@ -180,21 +188,40 @@ def _save_cache(key: str, result: dict) -> None:
         pass  # 缓存写失败不影响主流程
 
 
+# ── 系统提示词：身份 + 纪律（与正文分离，指令更稳，不被论文内容带偏）──
+_MAP_SYSTEM = {
+    "zh": ("你是一名严谨的学术论文摘要助手。只依据给定的章节文本概括，"
+           "不编造、不引入外部知识；语言精炼、忠于原意。所有输出用中文。"),
+    "en": ("You are a rigorous academic paper summarization assistant. Summarize "
+           "strictly from the given section text; do not fabricate or add outside "
+           "knowledge. Be concise and faithful. Respond in English."),
+}
+_REDUCE_SYSTEM = {
+    "zh": ("你是一名严谨的学术论文摘要助手，负责把多段章节摘要整合成结构化 JSON。"
+           "要求：严格只输出 JSON，不要任何解释或围栏；所有字段都必须填写、不得留空；"
+           "只依据给定内容归纳，信息不足时基于已有内容合理概括而非杜撰；字段值用中文。"),
+    "en": ("You are a rigorous academic paper summarization assistant that merges "
+           "section summaries into a structured JSON object. Rules: output ONLY valid "
+           "JSON, no explanation or code fences; every field must be filled, none empty; "
+           "summarize strictly from the given content, never fabricate; values in English."),
+}
+
+
 def _map_section(section: dict, lang: str) -> str:
     """Map 阶段：对单个章节生成简短摘要。"""
     if lang == "zh":
-        lang_instruction = "请用中文回答。"
         task = f"以下是论文章节「{section['title']}」的内容，请用2~3句话概括其核心要点："
     else:
-        lang_instruction = "Please respond in English."
         task = f"Below is the content of section '{section['title']}'. Summarize its key points in 2-3 sentences:"
 
     prompt = (
-        f"{lang_instruction}\n"
         f"{task}\n\n"
         f"{section['content'][:MAX_SECTION_LEN]}"
     )
-    return _call_deepseek(prompt, max_tokens=MAP_MAX_TOKENS)
+    return _call_deepseek(
+        prompt, max_tokens=MAP_MAX_TOKENS,
+        system=_MAP_SYSTEM.get(lang, _MAP_SYSTEM["en"]),
+    )
 
 
 def _reduce_summaries(title: str, section_summaries: list, lang: str) -> dict:
@@ -250,6 +277,7 @@ def _reduce_summaries(title: str, section_summaries: list, lang: str) -> dict:
         prompt,
         use_json_mode=True,
         max_tokens=REDUCE_MAX_TOKENS,
+        system=_REDUCE_SYSTEM.get(lang, _REDUCE_SYSTEM["en"]),
     )
     return _safe_json_loads(raw)
 

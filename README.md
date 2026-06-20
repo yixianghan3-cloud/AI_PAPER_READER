@@ -336,7 +336,7 @@ git checkout -b feature/batch-parsing
 
 - [x] 检索结果缓存（按 query 存 json，命中跳过 arXiv 请求，降低对代理的依赖）
       —— ✅ 已实现（v1.1 `search_agent.py`，缓存于 `cache/search_*.json`）
-- [x] 检索增强：Query Rewriter（自然语言/中文→英文检索词）+ OpenAlex 选题（引用排序）
+- [x] 检索增强：Query Rewriter（自然语言/中文→英文检索词）+ OpenAlex 智能选题（相关性优先）
       —— ✅ 可用（`agents/query_rewriter.py`、`agents/openalex_agent.py`，环境变量
       `USE_QUERY_REWRITE` / `USE_OPENALEX` / `OPENALEX_MAILTO`，默认关=纯 arXiv）。
       S2 版 `agents/semantic_agent.py` 保留为可选后备。详见 [IMPROVEMENTS.md](IMPROVEMENTS.md) 第 2 节

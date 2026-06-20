@@ -33,6 +33,9 @@ OA_MAX_RETRY    = int(os.environ.get("OPENALEX_MAX_RETRY", "3"))
 OA_MIN_INTERVAL = float(os.environ.get("OPENALEX_MIN_INTERVAL", "0.2"))  # OpenAlex 限流宽，间隔可小
 OA_RETRY_BASE   = float(os.environ.get("OPENALEX_RETRY_BASE", "2.0"))
 OA_CACHE        = os.environ.get("OPENALEX_CACHE", "1") != "0"
+# 排序：smart（默认，相关候选内按引用排，兼顾相关性与影响力）
+#        | relevance（纯相关性）| citations（大候选纯引用，宽泛词会顶弱相关高引）
+OA_SORT         = os.environ.get("OPENALEX_SORT", "smart")
 
 # 只取用得上的字段，减小负载（OpenAlex 推荐 select）
 OA_SELECT = ("id,display_name,publication_year,authorships,cited_by_count,"
@@ -204,6 +207,59 @@ def _to_meta(work: dict) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────
+# 去重合并：同一篇论文的多条 Work（预印本 / 正式发表）合并成一条
+# ─────────────────────────────────────────────────────────────
+# 已知反爬 / 拒绝程序化下载的域名（与 search_agent 保持一致）
+_BLOCKED_PDF_HOSTS = ("ojs.aaai.org",)
+
+
+def _norm_title(s: str) -> str:
+    """标题归一化（仅留小写字母数字 + 单空格），用于判定是否同一篇。"""
+    return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
+
+
+def _pdf_rank(url: str) -> int:
+    """PDF 可下载性打分：arXiv 直链 > 普通直链 > 反爬域名 > 无。"""
+    if not url:
+        return 0
+    u = url.lower()
+    if "arxiv.org" in u:
+        return 3
+    if any(h in u for h in _BLOCKED_PDF_HOSTS):
+        return 1
+    return 2
+
+
+def _merge_two(a: dict, b: dict) -> dict:
+    """合并同一篇的两条记录：引用取最大，PDF 取更可下载者，摘要取更长者。"""
+    base = dict(a if a.get("citation_count", 0) >= b.get("citation_count", 0) else b)
+    base["citation_count"] = max(a.get("citation_count", 0), b.get("citation_count", 0))
+    # PDF：谁更可下载用谁（命名用的 arxiv_id 跟随所选 PDF）
+    for cand in (a, b):
+        if _pdf_rank(cand.get("pdf_url")) > _pdf_rank(base.get("pdf_url")):
+            base["pdf_url"] = cand.get("pdf_url")
+            base["arxiv_id"] = cand.get("arxiv_id")
+    # 摘要：取更长的（信息更全）
+    for cand in (a, b):
+        if len(cand.get("abstract") or "") > len(base.get("abstract") or ""):
+            base["abstract"] = cand.get("abstract")
+    return base
+
+
+def _dedup_merge(metas: list) -> list:
+    """按归一化标题合并重复论文；无标题者原样保留。保持首次出现顺序。"""
+    merged = {}      # norm_title -> meta（dict 有序，保留首见顺序）
+    extras = []      # 无标题，不参与去重
+    for m in metas:
+        k = _norm_title(m.get("title", ""))
+        if not k:
+            extras.append(m)
+            continue
+        merged[k] = _merge_two(merged[k], m) if k in merged else m
+    return list(merged.values()) + extras
+
+
+# ─────────────────────────────────────────────────────────────
 # 对外：检索（返回 meta 列表，已按引用数降序）
 # ─────────────────────────────────────────────────────────────
 def openalex_search(query: str, max_results: int = 5) -> list:
@@ -219,8 +275,12 @@ def openalex_search(query: str, max_results: int = 5) -> list:
         print(f"[OpenAlex日志] 命中检索缓存: {query}（{len(cached)} 篇）")
         return cached
 
-    # 多取候选再本地按引用数精排（OpenAlex search 默认按相关性）
-    per_page = max(max_results, min(max_results * 3, 50))
+    # relevance（默认）：直接取 OpenAlex 相关性 top-N，质量最稳
+    # citations：多取候选再按引用重排（适合"找经典高引"，但宽泛词下会顶弱相关高引）
+    if OA_SORT == "citations":
+        per_page = max(max_results, min(max_results * 3, 50))
+    else:
+        per_page = max(max_results, min(max_results * 2, 50))   # 多取候选，留过滤余量
     params = {
         "search": query,
         "per-page": str(per_page),
@@ -234,9 +294,18 @@ def openalex_search(query: str, max_results: int = 5) -> list:
     data = _fetch_oa(url)
     works = data.get("results") or []
     metas = [_to_meta(w) for w in works if w.get("display_name")]
+    # 过滤掉既无 PDF 又无摘要的论文（无内容可摘要，注定失败；如无开放全文的老论文）
+    metas = [m for m in metas if m.get("pdf_url") or (m.get("abstract") or "").strip()]
 
-    # 按引用数降序（"挑高质量"）。TODO：可加相关性加权 / 年份 / 领域过滤。
-    metas.sort(key=lambda m: m.get("citation_count", 0), reverse=True)
+    # 去重合并：同一篇论文 OpenAlex 常存成多条 Work（预印本 / 正式发表）。
+    # 合并成一条，引用数取最大（排序不失真），PDF 取最可下载源（arXiv 直链优先，
+    # 避开反爬出版商链）——既消除重复，又从源头减少下载兜底。
+    metas = _dedup_merge(metas)
+
+    # smart（默认）/ citations：在相关候选内按引用排序（让经典/高影响力浮上来）；
+    # relevance：纯保留 OpenAlex 相关性顺序。
+    if OA_SORT != "relevance":
+        metas.sort(key=lambda m: m.get("citation_count", 0), reverse=True)
     metas = metas[:max_results]
 
     if metas:

@@ -16,16 +16,26 @@ except Exception:
     _call_deepseek = None
 
 
-_PROMPT = (
-    "You convert a user's research interest into an English search query for academic "
-    "paper databases (arXiv / Semantic Scholar).\n"
+# 系统提示词：身份 + 规则（与用户输入分离，指令更稳定，不易被正文带偏）
+_SYSTEM = (
+    "You are a query-rewriting assistant for academic paper databases "
+    "(arXiv / OpenAlex). You turn a user's research interest into an English "
+    "search query.\n"
     "Rules:\n"
-    "- Output ONLY 2-6 English keywords/phrases, space-separated.\n"
+    "- Output ONLY the search query: 2-6 English keywords/phrases, space-separated.\n"
     "- No explanation, no punctuation, no quotes, single line.\n"
-    "- Translate non-English input to English domain terms.\n\n"
-    "User input: {nl}\n"
-    "Search query:"
+    "- Translate non-English (e.g. Chinese) input into standard English domain terms.\n"
+    "- If the input is ALREADY clean English keywords or an exact paper title, "
+    "return it UNCHANGED (do not paraphrase, expand, or add synonyms). "
+    "Preserving a precise title keeps retrieval accurate.\n"
+    "- If the user explicitly NAMES a specific paper by its title (even embedded in "
+    "a longer sentence or mixed Chinese/English, e.g. '帮我找 BERT 那篇预训练论文'), "
+    "output THAT paper's title exactly and nothing else — the user wants that one paper.\n"
+    "- Prefer the field's canonical terminology over rare synonyms."
 )
+
+# 用户消息只放检索诉求本身
+_USER = "User input: {nl}\nSearch query:"
 
 
 def rewrite_query(nl_text: str) -> str:
@@ -39,7 +49,9 @@ def rewrite_query(nl_text: str) -> str:
         return nl_text
 
     try:
-        raw = _call_deepseek(_PROMPT.format(nl=nl_text), max_tokens=60)
+        raw = _call_deepseek(
+            _USER.format(nl=nl_text), max_tokens=60, system=_SYSTEM
+        )
     except Exception as e:
         print(f"[改写日志] 查询改写失败，回退原始查询：{e}")
         return nl_text

@@ -1,10 +1,28 @@
+# ── Python ──
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# ── 运行产物（下载的 PDF / 三层缓存，含 arxiv_title_map.json）──
 downloads/
 *.pdf
-.vscode/
 cache/
-.streamlit/secrets.toml
-run.sh
+
+# ── 密钥 / 机密（务必保持忽略，DEEPSEEK_API_KEY 等只走环境变量）──
 .env
+.env.*
+.streamlit/secrets.toml
+
+# ── 本地脚本 / 会话备忘（非项目产物）──
+run.sh
+NOTES.md
+
+# ── 编辑器 / IDE ──
+.vscode/
+.idea/
 .claude/
+
+# ── 日志 / 系统垃圾（跨平台团队）──
+*.log
+.DS_Store
+Thumbs.db

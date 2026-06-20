@@ -20,6 +20,48 @@ from streamlit_echarts import st_echarts
 
 
 # ============================================================
+# 全文来源推断（显示层，不改契约 source 字段）
+# ============================================================
+# source 字段是「检索引擎」(openalex/arxiv...)，永远一个值、信息量低。
+# 这里从 pdf_url 推断「全文实际来源」(arXiv / 出版商 / 仅摘要)，更有用。
+_PUBLISHER_HOSTS = {
+    "arxiv.org":      "arXiv",
+    "aaai.org":       "AAAI",
+    "ieee":           "IEEE",
+    "acm.org":        "ACM",
+    "openreview":     "OpenReview",
+    "mlr.press":      "PMLR",
+    "neurips":        "NeurIPS",
+    "springer":       "Springer",
+    "sciencedirect":  "Elsevier",
+    "nature.com":     "Nature",
+    "biorxiv":        "bioRxiv",
+    "hal.":           "HAL",
+    "ssrn":           "SSRN",
+}
+
+
+def fulltext_source(paper: dict, parsed: dict = None) -> str:
+    """返回「全文来源」短标签：arXiv / AAAI / … / 仅摘要。"""
+    # 解析降级为摘要 → 明确标「仅摘要」
+    if parsed and parsed.get("parse_method") == "fallback-abstract":
+        return "仅摘要"
+    url = (paper.get("pdf_url") or "").lower()
+    if not url:
+        return "仅摘要"
+    for key, name in _PUBLISHER_HOSTS.items():
+        if key in url:
+            return name
+    # 兜底：取主域名词（如 example.com → example）
+    try:
+        host = url.split("//", 1)[-1].split("/", 1)[0].replace("www.", "")
+        parts = host.split(".")
+        return parts[-2] if len(parts) >= 2 else (host or "网页")
+    except Exception:
+        return "网页"
+
+
+# ============================================================
 # 可配置常量
 # ============================================================
 # 起始页示例 chips（用户首次进入时看到的"快速开始"选项）
@@ -125,7 +167,7 @@ def render_pdf_iframe(pdf_url: str, height: int = 720, highlight: str = None):
     Chrome 内嵌的 PDF viewer 加载时会自动高亮该词（黄色）。
     """
     if not pdf_url:
-        st.warning("此论文没有可用的 PDF 链接")
+        st.info("这篇论文没有公开的 PDF 链接，摘要基于其官方摘要生成。可点上方「PDF 原始链接」到来源站查看全文。")
         return
 
     src = pdf_url
@@ -200,9 +242,10 @@ def render_single_view(paper, parsed, summ):
     with meta_l:
         authors = ", ".join(paper.get("authors", []))
         year = paper.get("year") or "未知"
-        source = paper.get("source", "-")
+        engine = paper.get("source", "-")
+        ft_src = fulltext_source(paper, parsed)
         st.markdown(f"**作者**: {authors or '未知'}")
-        st.caption(f"**年份**: {year}　|　**来源**: `{source}`")
+        st.caption(f"**年份**: {year}　|　**全文来源**: `{ft_src}`　|　**检索自**: `{engine}`")
         if paper.get("pdf_url"):
             st.markdown(f"[PDF 原始链接 ↗]({paper['pdf_url']})")
     with meta_r:
@@ -211,7 +254,8 @@ def render_single_view(paper, parsed, summ):
             st.caption(f"解析方式: `{parsed.get('parse_method', '-')}`")
 
     if summ is None:
-        st.warning("此论文摘要生成失败，请查看错误信息")
+        st.warning("这篇论文没能生成摘要（多为 PDF 解析为空或内容过短）。"
+                   "可在左侧换一篇试试，或重新检索更具体的关键词。")
         return
 
     st.markdown('<div class="ai-strip"></div>', unsafe_allow_html=True)
@@ -287,7 +331,7 @@ def render_pdf_compare_view(paper, parsed, summ):
     st.caption(
         f"{', '.join(paper.get('authors', [])[:2])} · "
         f"{paper.get('year', '?')} · "
-        f"{paper.get('source', '?')}"
+        f"全文来源 {fulltext_source(paper, parsed)}"
     )
 
     st.markdown(
@@ -296,7 +340,7 @@ def render_pdf_compare_view(paper, parsed, summ):
     )
 
     if summ is None:
-        st.warning("此论文摘要生成失败，无法进入对比视图")
+        st.warning("这篇论文没能生成摘要，暂时无法对照阅读。请在左侧换一篇，或重新检索。")
         return
 
     # 62/38 分屏

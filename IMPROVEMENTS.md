@@ -8,7 +8,7 @@
 | # | 改进 | 优先级 | 风险 | 主要收益 |
 |---|------|--------|------|----------|
 | 1 | 搜索精度（短语/降级/排序/去重） | **P0** | 低 | 搜得更准、不再空结果 |
-| 2 | 检索增强：OpenAlex 选题 + Query Rewriter　✅ 可用 | P1 | 低 | 引用排序、中文/自然语言检索 |
+| 2 | 检索增强：OpenAlex 选题 + Query Rewriter　✅ 可用 | P1 | 低 | 相关性选题、中文/自然语言检索 |
 | 3 | LLM 摘要并发 | P1 | 中 | 缩短摘要阶段耗时 |
 | 4 | MinerU 批处理 | P2 | 高 | 缩短冷启动（已被缓存摊销） |
 | 5 | 零散项（见第 5 节） | P3 | 低 | 一致性 / 收尾 |
@@ -53,11 +53,11 @@
 
 > **为什么是 OpenAlex 而非 Semantic Scholar**：最初按 S2 实现（`semantic_agent.py` 仍在，作可选后备），但 **S2 的 API key 申请被拒**（开放资源有限），且无 key 实测持续 429。改用 **OpenAlex**——免费、**无需审批 key**、限流宽（polite pool 约 10 万/天），功能对等。
 
-**pipeline**：`自然语言 → Query Rewriter(LLM) → OpenAlex 选题(引用排序) → arXiv 取 PDF → 解析 → 摘要`
+**pipeline**：`自然语言 → Query Rewriter(LLM) → OpenAlex 智能选题(相关性优先) → arXiv 取 PDF → 解析 → 摘要`
 
 ### ✅ 已实现并实测（2026-06）
 - `agents/query_rewriter.py`：自然语言→英文检索词，复用 DeepSeek，失败兜底返回原文。实测 `我想了解大模型如何减少幻觉` → `large language model hallucination reduction`。
-- `agents/openalex_agent.py`：OpenAlex Works API，含 **polite pool(mailto) / 重试 / 429 退避 / 限速 / 缓存（前缀 search_oa_）**；重建倒排 abstract、正则提取 arXiv id、按引用数排序。**实测免 key 直接返回**（如 RAG → 652/328/320 引三篇，PDF 衔接正常）。
+- `agents/openalex_agent.py`：OpenAlex Works API，含 **polite pool(mailto) / 重试 / 429 退避 / 限速 / 缓存（前缀 search_oa_）**；重建倒排 abstract、正则提取 arXiv id。排序**默认相关性**（可选 `OPENALEX_SORT=citations` 找高引；实测纯引用在宽泛词下会顶弱相关高引如 R 语言，故默认相关性）。**实测免 key 直接返回**，PDF 衔接正常。
 - `agents/semantic_agent.py`：S2 版（保留为可选后备，需 key）。
 - `agents/search_agent.py`：容错 import + 来源优先级 `OpenAlex > S2 > arXiv`，缓存按来源区分，**契约字段不变（app/UI 不用动）**。
 
@@ -69,6 +69,7 @@
 USE_QUERY_REWRITE=1                 # 开「自然语言→英文检索词」
 USE_OPENALEX=1                      # 开 OpenAlex 检索（推荐）
 OPENALEX_MAILTO=你的邮箱            # 进 polite pool，更稳更快（强烈建议）
+# 可选 OPENALEX_SORT=citations      # 找经典高引（宽泛词慎用，会顶弱相关高引）
 # 可选后备：USE_SEMANTIC=1 + S2_API_KEY=...（拿到 S2 key 时才用）
 ```
 

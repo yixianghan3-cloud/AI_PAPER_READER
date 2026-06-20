@@ -25,7 +25,7 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from contracts.search_contract import search_papers
-from contracts.parse_contract import parse_pdf
+from contracts.parse_contract import parse_pdf, parse_pdfs
 from contracts.llm_contract import summarize_paper
 
 from components.styles import inject_styles
@@ -33,6 +33,7 @@ from components.views import (
     render_landing,
     render_single_view,
     render_pdf_compare_view,
+    fulltext_source,
 )
 
 
@@ -61,6 +62,7 @@ def init_state():
         "view_mode"     : "single",       # single | pdf_compare
         "run_pipeline"  : False,
         "max_results"   : 3,
+        "auto_count"    : True,           # 按查询意图自动决定篇数（关掉则用滑块）
         "lang"          : "zh",
     }
     for k, v in defaults.items():
@@ -75,26 +77,6 @@ inject_styles()
 # ============================================================
 # 兜底解析 / 摘要
 # ============================================================
-def safe_parse(paper):
-    try:
-        local_path = paper.get("local_path", "")
-        if not local_path:
-            abstract = paper.get("abstract", "")
-            return {
-                "title"        : paper.get("title", ""),
-                "full_text"    : abstract,
-                "sections"     : [{"title": "Abstract", "content": abstract}],
-                "word_count"   : len(abstract.split()),
-                "parse_method" : "fallback-abstract",
-            }
-        return parse_pdf(local_path)
-    except Exception as e:
-        st.session_state.errors.append(
-            f"解析失败 - {paper.get('title', '?')[:40]}: {e}"
-        )
-        return None
-
-
 def safe_summarize(parsed, lang):
     if parsed is None:
         return None
@@ -110,7 +92,7 @@ def safe_summarize(parsed, lang):
 # ============================================================
 # Pipeline 执行
 # ============================================================
-def run_pipeline_now(query: str, max_results: int, lang: str):
+def run_pipeline_now(query: str, max_results: int, lang: str, auto_count: bool = False):
     st.session_state.query        = query
     st.session_state.papers       = []
     st.session_state.parsed_list  = []
@@ -124,7 +106,7 @@ def run_pipeline_now(query: str, max_results: int, lang: str):
         try:
             st.write("**[1/3] 检索论文**")
             t0 = time.time()
-            papers = search_papers(query, max_results=max_results)
+            papers = search_papers(query, max_results=max_results, auto_count=auto_count)
             st.session_state.papers = papers
             st.session_state.timings["search"] = time.time() - t0
             if not papers:
@@ -134,13 +116,39 @@ def run_pipeline_now(query: str, max_results: int, lang: str):
 
             st.write("**[2/3] 解析 PDF**")
             t0 = time.time()
-            parse_bar = st.progress(0.0, text="准备解析...")
-            parsed_list = []
+            parsed_list = [None] * len(papers)
+
+            # 无 PDF 的论文：直接用摘要兜底（不进 MinerU）
             for i, p in enumerate(papers):
-                parse_bar.progress(i / len(papers),
-                                   text=f"解析中 {i + 1}/{len(papers)}: {p['title'][:50]}")
-                parsed_list.append(safe_parse(p))
-            parse_bar.progress(1.0, text="解析完成")
+                if not p.get("local_path"):
+                    abstract = p.get("abstract", "")
+                    parsed_list[i] = {
+                        "title"       : p.get("title", ""),
+                        "full_text"   : abstract,
+                        "sections"    : [{"title": "Abstract", "content": abstract}],
+                        "word_count"  : len(abstract.split()),
+                        "parse_method": "fallback-abstract",
+                    }
+
+            # 有 PDF 的论文：合并成「一次 MinerU 批量调用」（模型只装载一次）
+            need = [(i, p) for i, p in enumerate(papers) if p.get("local_path")]
+            if need:
+                parse_bar = st.progress(
+                    0.0, text=f"批量解析 {len(need)} 篇（MinerU 模型只装载一次）..."
+                )
+                try:
+                    docs = parse_pdfs([p["local_path"] for _, p in need])
+                except Exception as e:
+                    docs = [None] * len(need)
+                    st.session_state.errors.append(f"批量解析失败: {e}")
+                for (i, p), doc in zip(need, docs):
+                    if doc is None:
+                        st.session_state.errors.append(
+                            f"解析失败 - {p.get('title', '?')[:40]}"
+                        )
+                    parsed_list[i] = doc
+                parse_bar.progress(1.0, text="解析完成")
+
             st.session_state.parsed_list = parsed_list
             st.session_state.timings["parse"] = time.time() - t0
             ok = sum(1 for x in parsed_list if x)
@@ -173,9 +181,17 @@ def run_pipeline_now(query: str, max_results: int, lang: str):
 # ============================================================
 with st.sidebar:
     with st.expander("设置", expanded=False):
-        st.session_state.max_results = st.slider(
-            "检索论文数量", 1, 10, st.session_state.max_results
+        st.session_state.auto_count = st.toggle(
+            "自动调整篇数（按查询意图）",
+            value=st.session_state.auto_count,
+            help="开：精确论文标题→少而精，宽泛话题→多给候选。关：用下方滑块固定篇数。",
         )
+        st.session_state.max_results = st.slider(
+            "检索论文数量", 1, 10, st.session_state.max_results,
+            disabled=st.session_state.auto_count,
+        )
+        if st.session_state.auto_count:
+            st.caption("篇数由查询意图自动决定；关掉开关可手动固定。")
         st.session_state.lang = st.radio(
             "摘要语言", ["zh", "en"], horizontal=True,
             index=0 if st.session_state.lang == "zh" else 1,
@@ -212,10 +228,15 @@ with st.sidebar:
                 if summ_ok
                 else '<span class="sb-badge sb-badge-warn">失败</span>'
             )
+            parsed_i = (
+                st.session_state.parsed_list[i]
+                if i < len(st.session_state.parsed_list) else None
+            )
+            ft_src = fulltext_source(paper, parsed_i)
             st.markdown(f"""
 <div class="sb-card {'sb-card-sel' if is_sel else ''}">
   <div class="sb-title">{paper['title']}</div>
-  <div class="sb-meta">{authors_disp} · {paper.get('year', '?')} · {paper.get('source', '?')}</div>
+  <div class="sb-meta">{authors_disp} · {paper.get('year', '?')} · {ft_src}</div>
   {badge}
 </div>
 """, unsafe_allow_html=True)
@@ -273,6 +294,7 @@ if st.session_state.run_pipeline:
         st.session_state.query,
         st.session_state.max_results,
         st.session_state.lang,
+        st.session_state.auto_count,
     )
     st.rerun()
 
