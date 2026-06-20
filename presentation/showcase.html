@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Paper Reader · 学术论文智能摘要系统</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* 本地 Inter 可变字体（离线可用，不依赖 Google Fonts CDN）。CJK 仍走系统字体栈。 */
+  @font-face{
+    font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;
+    src:url('assets/fonts/inter-latin.woff2') format('woff2');
+  }
   :root{
     --bg:#08080c; --bg2:#0e0e16; --card:#13131d; --line:rgba(255,255,255,.07);
-    --ink:#f5f4f9; --mut:#9a98b0; --dim:#6b6a7e;
+    --ink:#f5f4f9; --mut:#9a98b0; --dim:#86859b;
     --p1:#7F77DD; --p2:#b06ab3; --p3:#5DCAA5;
     --grad:linear-gradient(100deg,#7F77DD,#b06ab3 55%,#5DCAA5);
     --maxw:1180px;
@@ -28,8 +32,14 @@
   .nav .logo{font-size:1.15rem;font-weight:600;display:flex;align-items:center;gap:8px}
   .nav .logo svg.ic{font-size:1.3rem;color:var(--p1)}
   .nav-links{display:flex;gap:28px}
-  .nav-links a{color:var(--mut);text-decoration:none;font-size:.86rem;font-weight:500;transition:color .2s;cursor:pointer}
+  .nav-links a{color:var(--mut);text-decoration:none;font-size:.86rem;font-weight:500;transition:color .2s;cursor:pointer;
+    padding:9px 4px;display:inline-flex;align-items:center}
   .nav-links a:hover,.nav-links a.active{color:var(--ink)}
+
+  /* 键盘焦点环（可访问性）：所有可聚焦元素可见焦点 */
+  a:focus-visible,.cat-card:focus-visible,.demo-frame:focus-visible{
+    outline:2px solid var(--p1);outline-offset:3px;border-radius:8px}
+  :focus:not(:focus-visible){outline:none}
 
   .reveal{opacity:0;transform:translateY(46px) scale(.975);transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1)}
   .reveal.in{opacity:1;transform:none}
@@ -99,7 +109,7 @@
   .card:hover{transform:translateY(-5px);border-color:rgba(127,119,221,.42);background:rgba(127,119,221,.05)}
   .card .cic{width:42px;height:42px;border-radius:11px;background:rgba(127,119,221,.14);color:var(--p1);
              display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:14px}
-  .card h4{font-size:1rem;font-weight:600;margin-bottom:10px}
+  .card h3{font-size:1rem;font-weight:600;margin-bottom:10px}
   .card .desc{font-size:.84rem;color:var(--mut);line-height:1.6}
   .bullets{list-style:none;font-size:.85rem;color:#c4c2d4;line-height:1.5}
   .bullets li{display:flex;gap:9px;margin-bottom:10px;align-items:flex-start}
@@ -124,6 +134,98 @@
     section{padding:66px 22px}
     .g2,.g3,.g4,.g5,.cards-5{grid-template-columns:1fr}
     .nav-links{gap:15px}.nav{padding:12px 18px}
+  }
+
+  /* ===== 自动播放的"操作录屏"演示（模拟真实 app · 蓝紫红主题）===== */
+  .demo-wrap{max-width:900px;margin:0 auto 8px}
+  .demo-frame{
+    --da:#4285F4;--db:#9B72CB;--dc:#D96570;
+    --daGrad:linear-gradient(135deg,#4285F4,#9B72CB 50%,#D96570);
+    --daSurf:#1a1c20;--daBg:#0c0d11;--daLine:#2a2c32;--daInk:#f0f1f4;--daDim:#9aa0ac;
+    position:relative;border:1px solid var(--daLine);border-radius:14px;overflow:hidden;
+    background:var(--daBg);aspect-ratio:16/10;
+    box-shadow:0 50px 110px -50px rgba(127,119,221,.75),0 0 0 1px rgba(255,255,255,.02)}
+  .demo-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#15161c;border-bottom:1px solid var(--daLine)}
+  .demo-bar .dot{width:11px;height:11px;border-radius:50%}
+  .dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+  .demo-url{margin-left:10px;font-size:.7rem;color:var(--daDim);background:#0c0d11;border:1px solid var(--daLine);
+    border-radius:7px;padding:3px 12px}
+  .demo-body{position:relative;height:calc(100% - 38px)}
+
+  .demo-land,.demo-run{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:16px;opacity:0;transition:opacity .5s;pointer-events:none;padding:24px}
+  .demo-run{align-items:flex-start;padding-left:13%}
+  .demo-res{position:absolute;inset:0;display:grid;grid-template-columns:180px 1fr;opacity:0;transition:opacity .55s}
+  .demo-frame[data-phase="type"] .demo-land{opacity:1}
+  .demo-frame[data-phase="run"]  .demo-run {opacity:1}
+  .demo-frame[data-phase="result"] .demo-res{opacity:1}
+
+  .dl-title{font-size:1.8rem;font-weight:600;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .dl-sub{font-size:.74rem;color:var(--daDim);margin-top:-6px}
+  .dl-search{min-width:min(440px,82%);height:44px;border:1px solid var(--daLine);border-radius:11px;background:var(--daSurf);
+    display:flex;align-items:center;padding:0 16px;font-size:.9rem;color:var(--daInk)}
+  .dl-q{white-space:nowrap}
+  .dl-caret{width:1.5px;height:19px;background:var(--db);margin-left:2px;animation:dcar .9s step-end infinite}
+  @keyframes dcar{50%{opacity:0}}
+  .dl-go{background:var(--daGrad);color:#fff;font-size:.82rem;font-weight:600;padding:10px 30px;border-radius:10px;transition:transform .15s}
+  .dl-go.click{transform:scale(.92)}
+
+  .dr-title{font-size:1.05rem;font-weight:600;color:var(--daInk);margin-bottom:8px}
+  .dr-step{display:flex;align-items:center;gap:12px;font-size:.88rem;color:var(--daDim);opacity:.4;transition:opacity .4s,color .4s}
+  .dr-step .dr-ic{width:19px;height:19px;border-radius:50%;border:2px solid var(--daLine);position:relative;flex-shrink:0}
+  .dr-step.done{opacity:1;color:var(--daInk)}
+  .dr-step.done .dr-ic{border-color:var(--dc);background:var(--dc)}
+  .dr-step.done .dr-ic::after{content:"";position:absolute;left:5px;top:2px;width:4px;height:8px;
+    border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
+  .dr-step.active .dr-ic{border-color:var(--db);border-top-color:transparent;animation:dspin .7s linear infinite}
+  @keyframes dspin{to{transform:rotate(360deg)}}
+
+  .demo-side{background:#101116;border-right:1px solid var(--daLine);padding:13px 11px;overflow:hidden}
+  .ds-title{font-size:.82rem;font-weight:600;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .ds-meta{font-size:.64rem;color:var(--daDim);margin:3px 0 10px}
+  .ds-item{background:var(--daSurf);border:1px solid var(--daLine);border-radius:8px;padding:7px 9px;margin-bottom:7px;
+    opacity:0;transform:translateX(-12px);transition:opacity .4s,transform .4s}
+  .ds-item.in{opacity:1;transform:none}
+  .ds-item.sel{border-color:rgba(66,133,244,.6);background:linear-gradient(135deg,rgba(66,133,244,.16),rgba(155,114,203,.1))}
+  .ds-it-t{font-size:.66rem;color:var(--daInk);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .ds-it-b{display:inline-block;margin-top:5px;font-size:.55rem;color:#a8c7fa;background:rgba(66,133,244,.18);border-radius:99px;padding:1px 7px}
+
+  .demo-res-main{padding:15px 18px;overflow:hidden}
+  .rs-h{font-size:.96rem;font-weight:600;color:var(--daInk);line-height:1.3}
+  .rs-strip{height:2.5px;border-radius:99px;background:var(--daGrad);margin:9px 0 12px}
+  .rs-lbl{font-size:.68rem;font-weight:600;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:4px}
+  .rs-callout{font-size:.74rem;line-height:1.55;color:var(--daInk);
+    background:linear-gradient(135deg,rgba(66,133,244,.2),rgba(217,101,112,.08));
+    border:1px solid rgba(155,114,203,.3);border-radius:8px;padding:9px 11px;margin-bottom:12px}
+  .rs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .rs-cell{background:var(--daSurf);border:1px solid var(--daLine);border-radius:8px;padding:8px 9px}
+  .rs-cell b{display:block;font-size:.6rem;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px}
+  .rs-cell span{font-size:.63rem;color:#cfd2da;line-height:1.4}
+  .rs-chips{display:flex;gap:6px;flex-wrap:wrap}
+  .rs-chips i{font-style:normal;font-size:.62rem;color:#c8cdd5;border:1px solid var(--daLine);background:var(--daSurf);border-radius:99px;padding:3px 9px}
+  .demo-frame[data-phase="result"] .rs-reveal{animation:dup .5s both}
+  .rs-reveal.r1{animation-delay:.12s}.rs-reveal.r2{animation-delay:.26s}.rs-reveal.r3{animation-delay:.42s}.rs-reveal.r4{animation-delay:.58s}
+  @keyframes dup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .demo-cursor{position:absolute;width:19px;height:19px;left:46%;top:68%;z-index:6;pointer-events:none;
+    transition:left .85s cubic-bezier(.5,0,.2,1),top .85s cubic-bezier(.5,0,.2,1);filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+  .demo-cursor svg{width:100%;height:100%}
+  .demo-cursor.click{animation:dclick .32s}
+  @keyframes dclick{45%{transform:scale(.78)}}
+  .demo-cap{text-align:center;color:var(--mut);font-size:.8rem;margin-top:16px}
+  .demo-cap b{color:#cfccdf;font-weight:500}
+
+  @media(max-width:640px){
+    .demo-res{grid-template-columns:1fr}.demo-side{display:none}
+    .rs-grid{grid-template-columns:1fr}.demo-run{padding-left:8%}
+  }
+
+  /* ===== 无障碍：尊重"减少动态效果" ===== */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+      transition-duration:.001ms!important;scroll-behavior:auto!important}
+    .hero::before,.hero::after{animation:none}
+    .reveal{opacity:1!important;transform:none!important}
   }
 </style>
 </head>
@@ -173,9 +275,9 @@
   <div class="container">
     <div class="cap reveal">AI Paper Reader</div>
     <h1 class="reveal d1">读论文，<span class="grad">从一下午到一分钟</span></h1>
-    <p class="sub reveal d2">输入一个关键词，自动完成检索 · 解析 · 摘要 · 思维导图。<br>一站式学术论文速读系统。</p>
+    <p class="sub reveal d2">输入关键词或一句话，自动完成检索 · 解析 · 摘要 · 思维导图。<br>一站式学术论文速读系统。</p>
     <div class="pills reveal d3">
-      <span class="pill"><svg class="ic"><use href="#i-search"/></svg>arXiv 检索</span>
+      <span class="pill"><svg class="ic"><use href="#i-search"/></svg>智能检索</span>
       <span class="pill"><svg class="ic"><use href="#i-file"/></svg>MinerU 解析</span>
       <span class="pill"><svg class="ic"><use href="#i-cpu"/></svg>DeepSeek 摘要</span>
       <span class="pill"><svg class="ic"><use href="#i-fork"/></svg>思维导图</span>
@@ -204,7 +306,7 @@
     <div class="g2">
       <div class="card reveal">
         <div class="cic"><svg class="ic"><use href="#i-alert"/></svg></div>
-        <h4>痛点：信息过载</h4>
+        <h3>痛点：信息过载</h3>
         <ul class="bullets">
           <li><svg class="ic"><use href="#i-dot"/></svg>arXiv 每年新增论文超 10 万篇</li>
           <li><svg class="ic"><use href="#i-dot"/></svg>精读一篇平均需 30–60 分钟</li>
@@ -213,7 +315,7 @@
       </div>
       <div class="card reveal d2">
         <div class="cic"><svg class="ic"><use href="#i-rocket"/></svg></div>
-        <h4>机遇：LLM 自动化</h4>
+        <h3>机遇：LLM 自动化</h3>
         <ul class="bullets">
           <li><svg class="ic"><use href="#i-check"/></svg>DeepSeek 等大模型擅长理解与摘要</li>
           <li><svg class="ic"><use href="#i-check"/></svg>arXiv 开放 API + PDF 解析工具成熟</li>
@@ -229,11 +331,11 @@
   <div class="container">
     <div class="sec-head"><div class="cap reveal">02 · 系统架构</div><h2 class="reveal d1">五大模块，契约驱动</h2></div>
     <div class="g5">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-search"/></svg></div><h4>智能检索</h4><div class="desc">自然语言/中文经 LLM 改写，OpenAlex 智能选题，arXiv 取全文。</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h4>PDF 解析</h4><div class="desc">MinerU 转结构化 Markdown，识别章节、清理页眉脚。</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-cpu"/></svg></div><h4>AI 摘要</h4><div class="desc">DeepSeek + Map-Reduce，结构化摘要、关键词、导图。</div></div>
-      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h4>前端可视化</h4><div class="desc">Streamlit 多视图：摘要、导图、关键词、PDF 对照。</div></div>
-      <div class="card reveal d4"><div class="cic"><svg class="ic"><use href="#i-flask"/></svg></div><h4>测试评估</h4><div class="desc">ROUGE 评分、耗时与成功率，自动生成海报。</div></div>
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-search"/></svg></div><h3>智能检索</h3><div class="desc">自然语言/中文经 LLM 改写，OpenAlex 智能选题，arXiv 取全文。</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h3>PDF 解析</h3><div class="desc">MinerU 转结构化 Markdown，识别章节、清理页眉脚。</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-cpu"/></svg></div><h3>AI 摘要</h3><div class="desc">DeepSeek + Map-Reduce，结构化摘要、关键词、导图。</div></div>
+      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h3>前端可视化</h3><div class="desc">Streamlit 多视图：摘要、导图、关键词、PDF 对照。</div></div>
+      <div class="card reveal d4"><div class="cic"><svg class="ic"><use href="#i-flask"/></svg></div><h3>测试评估</h3><div class="desc">ROUGE 评分、耗时与成功率，自动生成海报。</div></div>
     </div>
   </div>
 </section>
@@ -261,9 +363,9 @@
   <div class="container">
     <div class="sec-head"><div class="cap reveal">03 · 技术亮点</div><h2 class="reveal d1">三层缓存 · 模块解耦 · 双语可视化</h2></div>
     <div class="g3">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-zap"/></svg></div><h4>极致性能</h4><div class="desc">解析 / 摘要 / 检索三层落盘缓存，单篇首解析约 90 秒，命中缓存后 0.4 秒返回，提速 200×。</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h4>模块解耦</h4><div class="desc">五模块按接口契约设计，各带 USE_MOCK 开关可独立测试，团队并行开发互不阻塞。</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-sparkles"/></svg></div><h4>双语可视化</h4><div class="desc">结构化摘要 + 可交互思维导图，中英双语输出，论文重点一目了然。</div></div>
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-zap"/></svg></div><h3>极致性能</h3><div class="desc">解析 / 摘要 / 检索三层落盘缓存，单篇首解析约 90 秒，命中缓存后 0.4 秒返回，提速 200×。</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h3>模块解耦</h3><div class="desc">五模块按接口契约设计，各带 USE_MOCK 开关可独立测试，团队并行开发互不阻塞。</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-sparkles"/></svg></div><h3>双语可视化</h3><div class="desc">结构化摘要 + 可交互思维导图，中英双语输出，论文重点一目了然。</div></div>
     </div>
     <div class="metrics reveal d2">
       <div class="metric"><div class="v">100%</div><div class="k">搜索成功率</div></div>
@@ -290,19 +392,74 @@
 <!-- 04 功能展示 -->
 <section id="s4">
   <div class="container">
-    <div class="sec-head"><div class="cap reveal">04 · 功能展示</div><h2 class="reveal d1">四大视图，一屏读懂一篇论文</h2></div>
+    <div class="sec-head"><div class="cap reveal">04 · 功能展示</div><h2 class="reveal d1">看它<span class="grad">跑起来</span></h2></div>
+
+    <!-- 自动播放的"操作录屏"：动画模拟真实 app 全流程 -->
+    <div class="demo-wrap reveal">
+      <div class="demo-frame" id="demoFrame" data-phase="type" role="img"
+           aria-label="演示：输入一句话 → 自动检索 5 篇论文 → 解析 → 生成结构化摘要">
+        <div class="demo-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="demo-url">localhost:8501 · 论文摘要助手</span>
+        </div>
+        <div class="demo-body">
+          <!-- 着陆 / 输入 -->
+          <div class="demo-land">
+            <div class="dl-title">论文摘要助手</div>
+            <div class="dl-sub">AI 论文研究助手 · 检索 · 解析 · 摘要 · 思维导图</div>
+            <div class="dl-search"><span class="dl-q" id="dlQ"></span><span class="dl-caret"></span></div>
+            <div class="dl-go" id="dlGo">开始 →</div>
+          </div>
+          <!-- 运行 -->
+          <div class="demo-run">
+            <div class="dr-title">Pipeline 运行中…</div>
+            <div class="dr-step"><span class="dr-ic"></span>检索论文 · OpenAlex 智能选题</div>
+            <div class="dr-step"><span class="dr-ic"></span>解析 PDF · MinerU 批量解析</div>
+            <div class="dr-step"><span class="dr-ic"></span>生成摘要 · DeepSeek Map-Reduce</div>
+          </div>
+          <!-- 结果 -->
+          <div class="demo-res">
+            <aside class="demo-side">
+              <div class="ds-title">论文列表</div>
+              <div class="ds-meta">5 篇 · 摘要成功 5 · 0.4s</div>
+              <div class="ds-list" id="dsList"></div>
+            </aside>
+            <main class="demo-res-main">
+              <div class="rs-h rs-reveal r1">Informer: Beyond Efficient Transformer for Long Sequence Forecasting</div>
+              <div class="rs-strip rs-reveal r1"></div>
+              <div class="rs-lbl rs-reveal r2">一句话总结</div>
+              <div class="rs-callout rs-reveal r2">提出 Informer 模型，用 ProbSparse 自注意力、蒸馏与生成式解码，高效解决长序列时间序列预测。</div>
+              <div class="rs-grid">
+                <div class="rs-cell rs-reveal r3"><b>研究问题</b><span>长序列预测中 Transformer 的二次复杂度与高内存占用</span></div>
+                <div class="rs-cell rs-reveal r3"><b>方法</b><span>ProbSparse 注意力 + 自注意力蒸馏 + 生成式解码器</span></div>
+                <div class="rs-cell rs-reveal r4"><b>结果</b><span>四个大规模数据集上显著优于现有方法</span></div>
+                <div class="rs-cell rs-reveal r4"><b>主要贡献</b><span>首次将 Transformer 高效用于长序列预测</span></div>
+              </div>
+              <div class="rs-chips rs-reveal r4"><i>time series</i><i>transformer</i><i>forecasting</i><i>attention</i></div>
+            </main>
+          </div>
+          <!-- 假光标 -->
+          <div class="demo-cursor" id="demoCursor">
+            <svg viewBox="0 0 24 24" fill="#fff" stroke="#1a1a1a" stroke-width="1.4" stroke-linejoin="round"><path d="M5 3l4.5 16 2.4-6.6L18.5 10z"/></svg>
+          </div>
+        </div>
+      </div>
+      <p class="demo-cap reveal"><b>全自动流程</b> · 上面是动画模拟，真实操作同样一句话进、摘要出</p>
+    </div>
+
+    <p class="sub-label reveal" style="margin-top:54px">四大视图</p>
     <div class="g4">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h4>结构化摘要</h4><div class="desc">一句话总结 + 问题 / 方法 / 结果 / 贡献 四维拆解</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-fork"/></svg></div><h4>思维导图</h4><div class="desc">可交互导图，拖拽缩放、折叠展开，脉络一目了然</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-tags"/></svg></div><h4>关键词</h4><div class="desc">自动抽取 3–5 个核心关键词，快速定位主题</div></div>
-      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-book"/></svg></div><h4>原文对照</h4><div class="desc">摘要与原始 PDF 并排，结论可随时回原文核对</div></div>
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h3>结构化摘要</h3><div class="desc">一句话总结 + 问题 / 方法 / 结果 / 贡献 四维拆解</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-fork"/></svg></div><h3>思维导图</h3><div class="desc">可交互导图，拖拽缩放、折叠展开，脉络一目了然</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-tags"/></svg></div><h3>关键词</h3><div class="desc">自动抽取 3–5 个核心关键词，快速定位主题</div></div>
+      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-book"/></svg></div><h3>原文对照</h3><div class="desc">摘要与原始 PDF 并排，结论可随时回原文核对</div></div>
     </div>
     <p class="sub-label reveal" style="margin-top:44px">应用场景</p>
     <div class="g4">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-cap"/></svg></div><h4>科研调研</h4><div class="desc">调研周期从数周压缩到数天</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-pen"/></svg></div><h4>课程写作</h4><div class="desc">文献综述效率提升 3 倍</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-building"/></svg></div><h4>技术跟进</h4><div class="desc">10 分钟浏览一周前沿</div></div>
-      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-lang"/></svg></div><h4>跨语言合作</h4><div class="desc">中英双语输出，降低语言门槛</div></div>
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-cap"/></svg></div><h3>科研调研</h3><div class="desc">调研周期从数周压缩到数天</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-pen"/></svg></div><h3>课程写作</h3><div class="desc">文献综述效率提升 3 倍</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-building"/></svg></div><h3>技术跟进</h3><div class="desc">10 分钟浏览一周前沿</div></div>
+      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-lang"/></svg></div><h3>跨语言合作</h3><div class="desc">中英双语输出，降低语言门槛</div></div>
     </div>
   </div>
 </section>
@@ -314,7 +471,7 @@
     <div class="g2">
       <div class="card reveal">
         <div class="cic"><svg class="ic"><use href="#i-check"/></svg></div>
-        <h4>实验结果</h4>
+        <h3>实验结果</h3>
         <ul class="bullets">
           <li><svg class="ic"><use href="#i-check"/></svg>高效：热启动 &lt; 0.5 秒，三层缓存支撑</li>
           <li><svg class="ic"><use href="#i-check"/></svg>智能检索：支持自然语言 / 中文，OpenAlex 智能选题</li>
@@ -325,7 +482,7 @@
       </div>
       <div class="card reveal d2">
         <div class="cic"><svg class="ic"><use href="#i-wrench"/></svg></div>
-        <h4>问题与改进方向</h4>
+        <h3>问题与改进方向</h3>
         <ul class="bullets">
           <li><svg class="ic"><use href="#i-arrow"/></svg>解析失败 → 升级配置 + 格式兜底</li>
           <li><svg class="ic"><use href="#i-arrow"/></svg>冷启动慢 → 预热常用关键词缓存</li>
@@ -342,7 +499,7 @@
   </div>
 </section>
 
-<footer class="footer">AI Paper Reader · 学术论文智能摘要系统　|　第二届人工智能导报海报展 · 2026.06 青岛</footer>
+<footer class="footer">AI Paper Reader · 学术论文智能摘要系统</footer>
 
 <script>
   const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.15});
@@ -363,12 +520,15 @@
     requestAnimationFrame(tick);cio.unobserve(e.target);}),{threshold:.6});
   document.querySelectorAll('[data-count]').forEach(el=>cio.observe(el));
 
+  // 基于滚动位置的导航高亮：nav 目标之间的小节归属到前一个 nav 项（不留空窗）
   const navLinks=[...document.querySelectorAll('.nav-a')];
-  const spyIds=['hero','catalogue','s2','perf','s5'];
-  const secs=spyIds.map(id=>document.getElementById(id));
-  const sio=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){
-    navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id));}}),{threshold:.4});
-  secs.forEach(s=>s&&sio.observe(s));
+  const spySecs=['hero','catalogue','s2','perf','s5'].map(id=>document.getElementById(id)).filter(Boolean);
+  function updateSpy(){
+    const y=window.scrollY+window.innerHeight*0.35;
+    let active=spySecs[0];
+    for(const s of spySecs){ if(s.offsetTop<=y) active=s; }
+    navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+active.id));
+  }
 
   const prog=document.getElementById('progress');
   const heroInner=document.querySelector('.hero .container');
@@ -382,10 +542,76 @@
         heroInner.style.opacity=String(Math.max(0,1-y/(window.innerHeight*0.72)));
       }else{heroInner.style.opacity='0';}
     }
+    updateSpy();
     ticking=false;
   }
   window.addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(onScroll);ticking=true;}},{passive:true});
   onScroll();
+
+  /* ===== 自动播放的"操作录屏"演示 ===== */
+  (function(){
+    const frame=document.getElementById('demoFrame');
+    if(!frame) return;
+    const q=document.getElementById('dlQ'),
+          go=document.getElementById('dlGo'),
+          cursor=document.getElementById('demoCursor'),
+          list=document.getElementById('dsList'),
+          steps=frame.querySelectorAll('.dr-step');
+    const QUERY='我想了解大模型如何减少幻觉';
+    const PAPERS=[
+      ['Informer: Beyond Efficient Transformer for Long Sequence Forecasting','arXiv'],
+      ['Are Transformers Effective for Time Series Forecasting?','arXiv'],
+      ['TS2Vec: Towards Universal Representation of Time Series','arXiv'],
+      ['NHITS: Neural Hierarchical Interpolation for Forecasting','arXiv'],
+      ['iTransformer: Inverted Transformers for Forecasting','arXiv'],
+    ];
+    const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let timers=[];
+    const at=(fn,ms)=>timers.push(setTimeout(fn,ms));
+    const clear=()=>{timers.forEach(clearTimeout);timers=[];};
+    const move=(x,y)=>{cursor.style.left=x;cursor.style.top=y;};
+    function buildList(instant){
+      list.innerHTML='';
+      PAPERS.forEach((p,i)=>{
+        const el=document.createElement('div');
+        el.className='ds-item'+(i===0?' sel':'');
+        el.innerHTML='<div class="ds-it-t">'+p[0]+'</div><span class="ds-it-b">'+p[1]+'</span>';
+        list.appendChild(el);
+        if(instant) el.classList.add('in'); else at(()=>el.classList.add('in'),170*i);
+      });
+    }
+    function cycle(){
+      clear();
+      // 复位
+      frame.dataset.phase='type'; q.textContent=''; go.classList.remove('click');
+      steps.forEach(s=>s.classList.remove('done','active')); list.innerHTML='';
+      // 静态降级：直接给结果终态，不循环
+      if(reduce){ frame.dataset.phase='result'; buildList(true); move('22%','42%'); return; }
+      move('46%','70%');
+      at(()=>move('38%','46%'),600);                 // 光标移到搜索框
+      let i=0;
+      at(function type(){ if(i<=QUERY.length){ q.textContent=QUERY.slice(0,i); i++; at(type,118); } },1400);
+      const typeEnd=1400+QUERY.length*118+260;
+      at(()=>move('50%','66%'),typeEnd);             // 移到「开始」
+      at(()=>{cursor.classList.add('click');go.classList.add('click');},typeEnd+720);
+      at(()=>cursor.classList.remove('click'),typeEnd+1040);
+      const runStart=typeEnd+1180;
+      at(()=>{frame.dataset.phase='run';move('13%','42%');},runStart);
+      [0,1,2].forEach(k=>{
+        at(()=>steps[k].classList.add('active'),runStart+300+k*760);
+        at(()=>{steps[k].classList.remove('active');steps[k].classList.add('done');},runStart+300+k*760+700);
+      });
+      const resStart=runStart+300+3*760+450;
+      at(()=>{frame.dataset.phase='result';buildList(false);move('22%','40%');},resStart);
+      at(cycle,resStart+4600);                       // 停留后循环
+    }
+    let started=false;
+    const dio=new IntersectionObserver((es)=>es.forEach(e=>{
+      if(e.isIntersecting){ if(!started){started=true;cycle();} }
+      else { clear(); started=false; }
+    }),{threshold:.3});
+    dio.observe(frame);
+  })();
 </script>
 </body>
 </html>

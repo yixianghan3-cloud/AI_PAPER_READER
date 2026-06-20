@@ -21,6 +21,7 @@ import os
 import json
 import time
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
 from openai import (
     OpenAI,
     AuthenticationError,
@@ -43,6 +44,9 @@ MAX_SECTION_LEN = 5000   # 单章节最大字符数
 #   如需更精确控制成本，可后续引入 tiktoken 改为按 token 截断（非必须）。
 MAP_MAX_TOKENS    = 512   # Map 阶段每章节小摘要，2~3 句话足够
 REDUCE_MAX_TOKENS = 4096  # Reduce 阶段要吐结构化摘要 + 完整 mindmap，需放宽
+# Map 章节并发数：章节摘要是 I/O 密集（等 DeepSeek），并发可大幅提速。
+# 有界以尊重 DeepSeek 限流（429 由已有退避兜底）；设 1 = 退回串行。
+MAP_CONCURRENCY   = int(os.environ.get("MAP_CONCURRENCY", "5"))
 CACHE_DIR         = "./cache"
 # ─────────────────────────────────────────────────────────────
 
@@ -334,15 +338,16 @@ def summarize_paper(parsed_doc: dict, lang: str = "zh") -> dict:
         ]
         sections = [{"title": f"全文-{i+1}", "content": c} for i, c in enumerate(chunks)]
 
-    # ── Map 阶段：逐章节摘要 ──────────────────────────────────
-    section_summaries = []
-    for section in sections:
-        if not section.get("content", "").strip():
-            continue
-        section_summaries.append(_map_section(section, lang))
-
-    if not section_summaries:
+    # ── Map 阶段：章节摘要（默认并发；I/O 密集，结果严格按章节顺序）──
+    work = [s for s in sections if s.get("content", "").strip()]
+    if not work:
         raise Exception("summarize_paper 失败：parsed_doc 中没有可用的文本内容")
+    if MAP_CONCURRENCY > 1 and len(work) > 1:
+        # executor.map 按输入顺序返回，保证与 Reduce 的 [1][2] 编号对应
+        with ThreadPoolExecutor(max_workers=min(MAP_CONCURRENCY, len(work))) as ex:
+            section_summaries = list(ex.map(lambda s: _map_section(s, lang), work))
+    else:
+        section_summaries = [_map_section(s, lang) for s in work]
 
     # ── Reduce 阶段：合并生成结构化 JSON ─────────────────────
     result = _reduce_summaries(title, section_summaries, lang)

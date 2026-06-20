@@ -65,11 +65,12 @@ def fulltext_source(paper: dict, parsed: dict = None) -> str:
 # 可配置常量
 # ============================================================
 # 起始页示例 chips（用户首次进入时看到的"快速开始"选项）
-# 选取标准：在 arxiv 上结果稳定、关键词清晰、解析容易成功
+# 各演示一种输入方式，引导用户用上新能力：
+#   精确标题(自动少而精) / 中文自然语言(自动改写+探索) / 英文关键词
 LANDING_SAMPLE_CHIPS = [
-    "transformer",
-    "diffusion models",
-    "RAG",
+    "Attention Is All You Need",   # 精确论文标题 → 直接命中经典
+    "大模型如何减少幻觉",            # 中文自然语言 → 自动改写成英文检索
+    "diffusion models",            # 英文关键词
     "in-context learning",
 ]
 
@@ -208,7 +209,7 @@ def render_landing():
             with in_l:
                 q = st.text_input(
                     "搜索",
-                    placeholder="想了解什么研究方向？",
+                    placeholder="想了解什么？关键词、中文描述、或论文标题都行",
                     label_visibility="collapsed",
                 )
             with in_r:

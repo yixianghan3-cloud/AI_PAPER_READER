@@ -77,6 +77,22 @@ SA._title_map[SA._norm_title("No Arxiv Paper")] = None        # 负缓存
 check("兜底 正缓存命中", SA._arxiv_pdf_by_title("Cached Paper") == ("1111.2222", "https://arxiv.org/pdf/1111.2222"))
 check("兜底 负缓存命中→None", SA._arxiv_pdf_by_title("No Arxiv Paper") == (None, None))
 
+# ── 6. LLM Map 章节并发：结果严格按章节顺序（mock，不打网络）──
+import agents.llm_agent as LLM
+
+LLM._map_section = lambda s, lang: f"S[{s['title']}]"          # 桩：返回带章节名的标记
+LLM._load_cache = lambda k: None                               # 绕过摘要缓存
+LLM._save_cache = lambda k, r: None
+LLM._reduce_summaries = lambda t, sums, lang: {                # 桩：把各章节摘要按序拼起来
+    "one_sentence": "|".join(sums), "structured_summary": {},
+    "keywords": [], "mindmap_markdown": "#",
+}
+_doc = {"title": "T", "full_text": "x",
+        "sections": [{"title": f"s{i}", "content": f"c{i}"} for i in range(6)]}
+LLM.MAP_CONCURRENCY = 5
+_r = LLM.summarize_paper(_doc, "en")
+check("Map并发 顺序严格保持", _r["one_sentence"] == "|".join(f"S[s{i}]" for i in range(6)))
+
 
 # ── 汇总 ────────────────────────────────────────────────────
 print(f"\n{_passed} passed, {_failed} failed")
