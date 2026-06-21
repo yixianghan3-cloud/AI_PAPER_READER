@@ -220,6 +220,113 @@
     .rs-grid{grid-template-columns:1fr}.demo-run{padding-left:8%}
   }
 
+  /* ===== 分功能动画：交替大图行（每个功能一个动画）===== */
+  #s4{--da:#4285F4;--db:#9B72CB;--dc:#D96570;--daGrad:linear-gradient(135deg,#4285F4,#9B72CB 50%,#D96570);
+      --daSurf:#1a1c20;--daLine:#2a2c32;--daInk:#f0f1f4;--daDim:#9aa0ac}
+  .feat{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,60px);align-items:center;margin:0 0 86px}
+  .feat-k{font-size:.74rem;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);margin-bottom:12px}
+  .feat-text h3{font-size:clamp(1.35rem,2.3vw,1.85rem);font-weight:600;margin-bottom:13px}
+  .feat-text p{color:var(--mut);font-size:.95rem;line-height:1.7;font-weight:300}
+  .feat-text .fl{list-style:none;margin-top:14px;font-size:.88rem;color:#c4c2d4}
+  .feat-text .fl li{display:flex;gap:9px;margin-bottom:8px;align-items:flex-start}
+  .feat-text .fl li svg.ic{font-size:1rem;color:var(--p3);flex-shrink:0;margin-top:3px}
+  .feat-demo{position:relative;border:1px solid var(--daLine);border-radius:14px;background:#0c0d11;overflow:hidden;
+    aspect-ratio:4/3;padding:18px;box-shadow:0 40px 90px -52px rgba(127,119,221,.7)}
+
+  /* 1 搜索：结果列表 + 循环移动的选中高亮 */
+  .fd-bar{display:flex;align-items:center;gap:9px;height:38px;border:1px solid var(--daLine);border-radius:9px;
+    background:var(--daSurf);padding:0 13px;font-size:.8rem;color:var(--daInk);margin-bottom:13px}
+  .fd-bar svg.ic{font-size:1rem;color:var(--db)}
+  .fd-results{position:relative}
+  .fd-row{display:flex;justify-content:space-between;align-items:center;gap:8px;height:36px;background:var(--daSurf);
+    border:1px solid var(--daLine);border-radius:8px;padding:0 11px;margin-bottom:8px;position:relative;z-index:1}
+  .fd-row .t{font-size:.68rem;color:var(--daInk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fd-row .b{font-size:.56rem;color:#a8c7fa;background:rgba(66,133,244,.18);border-radius:99px;padding:1px 7px;flex-shrink:0}
+  .fd-sel{position:absolute;left:0;right:0;top:0;height:36px;border-radius:8px;z-index:0;
+    background:linear-gradient(135deg,rgba(66,133,244,.24),rgba(155,114,203,.12));border:1px solid rgba(66,133,244,.6)}
+  .play .fd-sel{animation:selmove 4.4s cubic-bezier(.6,0,.25,1) infinite}
+  @keyframes selmove{0%,16%{transform:translateY(0)}25%,41%{transform:translateY(44px)}50%,66%{transform:translateY(88px)}75%,91%{transform:translateY(132px)}100%{transform:translateY(0)}}
+
+  /* 2 摘要：callout + 2x2，gradient 标签按序脉冲 */
+  .fd-callout{font-size:.7rem;line-height:1.5;color:var(--daInk);border-radius:8px;padding:9px 11px;margin-bottom:11px;
+    background:linear-gradient(135deg,rgba(66,133,244,.2),rgba(217,101,112,.08));border:1px solid rgba(155,114,203,.3)}
+  .fd-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .fd-cell{background:var(--daSurf);border:1px solid var(--daLine);border-radius:8px;padding:8px 9px}
+  .fd-cell b{display:block;font-size:.58rem;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px}
+  .fd-cell span{font-size:.6rem;color:#cfd2da;line-height:1.4}
+  .play .fd-cell{animation:cellpulse 4s ease-in-out infinite}
+  .play .fd-cell:nth-child(2){animation-delay:1s}
+  .play .fd-cell:nth-child(3){animation-delay:2s}
+  .play .fd-cell:nth-child(4){animation-delay:3s}
+  @keyframes cellpulse{0%,100%{border-color:var(--daLine);box-shadow:none}12%{border-color:rgba(127,119,221,.7);box-shadow:0 0 0 1px rgba(127,119,221,.3)}28%{border-color:var(--daLine);box-shadow:none}}
+
+  /* 3 思维导图：节点常显，连线 dash 流动 + 节点描边脉冲 */
+  .fd-map{width:100%;height:100%;display:block}
+  .fd-map .lnk{stroke:#7C6BA0;stroke-width:1.4;fill:none;stroke-dasharray:5 5}
+  .play .fd-map .lnk{animation:mapflow 1.4s linear infinite}
+  @keyframes mapflow{to{stroke-dashoffset:-20}}
+  .fd-map .nd{fill:#15161f;stroke:#9B72CB;stroke-width:1.5}
+  .fd-map .nd.root{fill:rgba(155,114,203,.28);stroke:#b06ab3}
+  .play .fd-map .nd{animation:ndpulse 3s ease-in-out infinite}
+  .play .fd-map .nd:nth-of-type(2){animation-delay:.4s}.play .fd-map .nd:nth-of-type(3){animation-delay:.8s}
+  .play .fd-map .nd:nth-of-type(4){animation-delay:1.2s}.play .fd-map .nd:nth-of-type(5){animation-delay:1.6s}
+  @keyframes ndpulse{0%,100%{stroke-width:1.5}50%{stroke-width:2.8}}
+  .fd-map text{fill:#e7e6f0;font-size:8.5px;font-family:inherit}
+
+  /* 4 单·双视图：单视图 ↔ PDF+摘要 分屏 循环切换 */
+  .fd-tabs{display:flex;gap:6px;margin-bottom:11px;position:relative}
+  .fd-tab{font-size:.64rem;padding:5px 11px;border-radius:7px;border:1px solid var(--daLine);color:var(--daDim)}
+  .fd-tab.a{background:var(--daGrad);color:#fff;border-color:transparent}  /* 默认/静态：单视图激活 */
+  .play .fd-tab.a{animation:tabA 6s step-end infinite}
+  .play .fd-tab.b{animation:tabB 6s step-end infinite}
+  @keyframes tabA{0%,50%{background:var(--daGrad);color:#fff;border-color:transparent}50.01%,100%{background:transparent;color:var(--daDim);border-color:var(--daLine)}}
+  @keyframes tabB{0%,50%{background:transparent;color:var(--daDim);border-color:var(--daLine)}50.01%,100%{background:var(--daGrad);color:#fff;border-color:transparent}}
+  .fd-stage{display:flex;gap:9px;height:calc(100% - 52px)}
+  .fd-pane{border:1px solid var(--daLine);border-radius:8px;background:var(--daSurf);padding:10px;overflow:hidden}
+  .fd-pdf{flex:0 0 0;opacity:0;padding:0;white-space:nowrap;font-size:.58rem;color:var(--daDim);line-height:1.7}
+  .fd-sum{flex:1;font-size:.6rem;color:#cfd2da;line-height:1.6}
+  .fd-sum .lbl{font-size:.58rem;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:5px;display:block}
+  .play .fd-pdf{animation:pdfin 6s ease-in-out infinite}
+  @keyframes pdfin{0%,12%{flex-basis:0;opacity:0;padding:0}28%,46%{flex-basis:46%;opacity:1;padding:10px}54%,100%{flex-basis:46%;opacity:1;padding:10px}}
+
+  @media(max-width:760px){
+    .feat{grid-template-columns:1fr;gap:22px;margin-bottom:54px}
+    .feat.rev .feat-text{order:-1}
+  }
+
+  /* ===== 痛点对比：传统 vs AI 速读 ===== */
+  .vs{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(14px,3vw,32px);align-items:stretch;margin-top:30px}
+  .vs-side{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 24px;text-align:center}
+  .vs-side.fast{border-color:rgba(127,119,221,.5);background:rgba(127,119,221,.06)}
+  .vs-h{font-size:.92rem;color:var(--mut);margin-bottom:12px}
+  .vs-time{font-size:clamp(2.4rem,6vw,3.4rem);font-weight:700;line-height:1}
+  .vs-time .u{font-size:1rem;font-weight:400;color:var(--mut);margin-left:5px}
+  .vs-d{font-size:.84rem;color:var(--mut);margin-top:12px;line-height:1.5}
+  .vs-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.06);margin-top:18px;overflow:hidden}
+  .vs-bar i{display:block;height:100%;border-radius:99px;width:0}
+  .vs-side.slow .vs-bar i{background:#a85c5c}
+  .vs-side.fast .vs-bar i{background:var(--grad)}
+  .in .vs-side.slow .vs-bar i{animation:barslow 2.6s cubic-bezier(.4,0,.2,1) .2s both}
+  .in .vs-side.fast .vs-bar i{animation:barfast .5s ease-out .2s both}
+  @keyframes barslow{from{width:0}to{width:100%}}
+  @keyframes barfast{from{width:0}to{width:5%}}
+  .vs-mid{display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--dim);font-size:1.05rem}
+  @media(max-width:680px){.vs{grid-template-columns:1fr;gap:12px}}
+
+  /* ===== 技术栈徽章 ===== */
+  .stack{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:38px}
+  .stack-b{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:11px 18px;transition:border-color .3s,transform .3s}
+  .stack-b:hover{border-color:rgba(127,119,221,.5);transform:translateY(-3px)}
+  .stack-b svg.ic{font-size:1.25rem;color:var(--p1)}
+  .stack-b b{font-size:.9rem;font-weight:600}
+  .stack-b span{font-size:.74rem;color:var(--mut);margin-left:3px}
+
+  /* ===== Hero 打字光标 ===== */
+  .type-caret{display:inline-block;width:3px;height:.95em;background:var(--p2);margin-left:4px;
+    vertical-align:-.07em;animation:tcar .85s step-end infinite}
+  @keyframes tcar{50%{opacity:0}}
+
   /* ===== 无障碍：尊重"减少动态效果" ===== */
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
@@ -264,8 +371,9 @@
   <div class="logo"><svg class="ic"><use href="#i-book"/></svg><span>AI Paper Reader</span></div>
   <div class="nav-links">
     <a class="nav-a" href="#hero">首页</a>
-    <a class="nav-a" href="#catalogue">目录</a>
-    <a class="nav-a" href="#s2">架构</a>
+    <a class="nav-a" href="#flow">架构</a>
+    <a class="nav-a" href="#s3">亮点</a>
+    <a class="nav-a" href="#s4">演示</a>
     <a class="nav-a" href="#perf">性能</a>
     <a class="nav-a" href="#s5">总结</a>
   </div>
@@ -274,7 +382,7 @@
 <section class="hero" id="hero">
   <div class="container">
     <div class="cap reveal">AI Paper Reader</div>
-    <h1 class="reveal d1">读论文，<span class="grad">从一下午到一分钟</span></h1>
+    <h1 class="reveal d1">读论文，<span class="grad" id="heroType"></span><span class="type-caret" id="heroCaret"></span></h1>
     <p class="sub reveal d2">输入关键词或一句话，自动完成检索 · 解析 · 摘要 · 思维导图。<br>一站式学术论文速读系统。</p>
     <div class="pills reveal d3">
       <span class="pill"><svg class="ic"><use href="#i-search"/></svg>智能检索</span>
@@ -283,19 +391,6 @@
       <span class="pill"><svg class="ic"><use href="#i-fork"/></svg>思维导图</span>
     </div>
     <div class="scrollcue reveal d4"><svg class="ic"><use href="#i-chevr"/></svg>向下滚动，开始探索</div>
-  </div>
-</section>
-
-<section id="catalogue">
-  <div class="container">
-    <div class="sec-head"><div class="cap reveal">目录</div><h2 class="reveal d1">Contents</h2></div>
-    <div class="cards-5">
-      <a class="cat-card reveal" href="#s1"><div class="cat-ic"><svg class="ic"><use href="#i-bulb"/></svg></div><div class="cat-num">01</div><div class="cat-title">背景介绍</div><div class="cat-en">Why</div></a>
-      <a class="cat-card reveal d1" href="#s2"><div class="cat-ic"><svg class="ic"><use href="#i-grid"/></svg></div><div class="cat-num">02</div><div class="cat-title">系统架构</div><div class="cat-en">How</div></a>
-      <a class="cat-card reveal d2" href="#s3"><div class="cat-ic"><svg class="ic"><use href="#i-zap"/></svg></div><div class="cat-num">03</div><div class="cat-title">技术亮点</div><div class="cat-en">Wow</div></a>
-      <a class="cat-card reveal d3" href="#s4"><div class="cat-ic"><svg class="ic"><use href="#i-present"/></svg></div><div class="cat-num">04</div><div class="cat-title">功能展示</div><div class="cat-en">Watch</div></a>
-      <a class="cat-card reveal d4" href="#s5"><div class="cat-ic"><svg class="ic"><use href="#i-flag"/></svg></div><div class="cat-num">05</div><div class="cat-title">结果总结</div><div class="cat-en">Future</div></a>
-    </div>
   </div>
 </section>
 
@@ -323,27 +418,29 @@
         </ul>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- 02 架构 -->
-<section id="s2" class="alt-bg">
-  <div class="container">
-    <div class="sec-head"><div class="cap reveal">02 · 系统架构</div><h2 class="reveal d1">五大模块，契约驱动</h2></div>
-    <div class="g5">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-search"/></svg></div><h3>智能检索</h3><div class="desc">自然语言/中文经 LLM 改写，OpenAlex 智能选题，arXiv 取全文。</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h3>PDF 解析</h3><div class="desc">MinerU 转结构化 Markdown，识别章节、清理页眉脚。</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-cpu"/></svg></div><h3>AI 摘要</h3><div class="desc">DeepSeek + Map-Reduce，结构化摘要、关键词、导图。</div></div>
-      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h3>前端可视化</h3><div class="desc">Streamlit 多视图：摘要、导图、关键词、PDF 对照。</div></div>
-      <div class="card reveal d4"><div class="cic"><svg class="ic"><use href="#i-flask"/></svg></div><h3>测试评估</h3><div class="desc">ROUGE 评分、耗时与成功率，自动生成海报。</div></div>
+    <div class="vs reveal">
+      <div class="vs-side slow">
+        <div class="vs-h">传统精读一篇</div>
+        <div class="vs-time">30<span class="u">分钟</span></div>
+        <div class="vs-bar"><i></i></div>
+        <div class="vs-d">逐页翻、找重点、记笔记</div>
+      </div>
+      <div class="vs-mid">VS</div>
+      <div class="vs-side fast">
+        <div class="vs-h">AI 速读一篇</div>
+        <div class="vs-time grad">1<span class="u" style="-webkit-text-fill-color:var(--mut)">分钟</span></div>
+        <div class="vs-bar"><i></i></div>
+        <div class="vs-d">一句话进，结构化摘要 + 思维导图出</div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- 工作流 -->
-<section class="flow" id="flow">
+<!-- 02 系统架构（工作流）-->
+<section class="flow alt-bg" id="flow">
   <div class="container">
-    <div class="sec-head"><div class="cap reveal">工作流</div><h2 class="reveal d1">五步，全自动</h2></div>
+    <div class="sec-head"><div class="cap reveal">02 · 系统架构</div><h2 class="reveal d1">五步，<span class="grad">全自动</span></h2></div>
     <div class="pipe">
       <div class="node" data-step><span class="nic"><svg class="ic"><use href="#i-sparkles"/></svg></span><div class="nm">理解</div><div class="sm">自然语言→关键词</div></div>
       <div class="conn" data-conn></div>
@@ -355,17 +452,29 @@
       <div class="conn" data-conn></div>
       <div class="node" data-step><span class="nic"><svg class="ic"><use href="#i-grid"/></svg></span><div class="nm">展示</div><div class="sm">4 视图 + 导图</div></div>
     </div>
+
+    <p class="sub-label reveal" style="margin-top:56px">技术栈</p>
+    <div class="stack reveal d1">
+      <span class="stack-b"><svg class="ic"><use href="#i-grid"/></svg><b>Streamlit</b><span>前端</span></span>
+      <span class="stack-b"><svg class="ic"><use href="#i-search"/></svg><b>OpenAlex</b><span>智能选题</span></span>
+      <span class="stack-b"><svg class="ic"><use href="#i-book"/></svg><b>arXiv</b><span>全文</span></span>
+      <span class="stack-b"><svg class="ic"><use href="#i-file"/></svg><b>MinerU</b><span>解析</span></span>
+      <span class="stack-b"><svg class="ic"><use href="#i-cpu"/></svg><b>DeepSeek</b><span>摘要</span></span>
+    </div>
   </div>
 </section>
 
 <!-- 03 技术亮点 -->
 <section id="s3">
   <div class="container">
-    <div class="sec-head"><div class="cap reveal">03 · 技术亮点</div><h2 class="reveal d1">三层缓存 · 模块解耦 · 双语可视化</h2></div>
+    <div class="sec-head"><div class="cap reveal">03 · 技术亮点</div><h2 class="reveal d1">检索增强 · <span class="grad">批处理 · 并发</span></h2></div>
     <div class="g3">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-zap"/></svg></div><h3>极致性能</h3><div class="desc">解析 / 摘要 / 检索三层落盘缓存，单篇首解析约 90 秒，命中缓存后 0.4 秒返回，提速 200×。</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-grid"/></svg></div><h3>模块解耦</h3><div class="desc">五模块按接口契约设计，各带 USE_MOCK 开关可独立测试，团队并行开发互不阻塞。</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-sparkles"/></svg></div><h3>双语可视化</h3><div class="desc">结构化摘要 + 可交互思维导图，中英双语输出，论文重点一目了然。</div></div>
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-lang"/></svg></div><h3>中文 / 自然语言检索</h3><div class="desc">中文一句话经 LLM 改写为英文检索式；已是干净英文或精确标题则原样保留，避免被改散。</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-search"/></svg></div><h3>智能选题 + 去重合并</h3><div class="desc">OpenAlex 按相关性 + 引用排序；同一篇的预印本/正式版自动合并，优选 arXiv 直链。</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-sparkles"/></svg></div><h3>按意图自动定篇数</h3><div class="desc">精确论文标题→少而精，宽泛话题→多给候选，无需手动调参。</div></div>
+      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-fork"/></svg></div><h3>arXiv 标题兜底</h3><div class="desc">出版商链下载不动时，用标题回查 arXiv 取全文；结果落盘缓存、快速失败、反爬域名跳过。</div></div>
+      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-cpu"/></svg></div><h3>MinerU 批量解析</h3><div class="desc">多篇合并为一次目录模式调用，模型只装载一次；批量失败自动回退逐篇，稳健。</div></div>
+      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-zap"/></svg></div><h3>摘要 Map 章节级并发</h3><div class="desc">逐章节摘要改线程池并发，顺序严格保持，实测约 2.6× 提速；配合三层缓存热启动 0.4 秒。</div></div>
     </div>
     <div class="metrics reveal d2">
       <div class="metric"><div class="v">100%</div><div class="k">搜索成功率</div></div>
@@ -447,19 +556,102 @@
       <p class="demo-cap reveal"><b>全自动流程</b> · 上面是动画模拟，真实操作同样一句话进、摘要出</p>
     </div>
 
-    <p class="sub-label reveal" style="margin-top:54px">四大视图</p>
-    <div class="g4">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-file"/></svg></div><h3>结构化摘要</h3><div class="desc">一句话总结 + 问题 / 方法 / 结果 / 贡献 四维拆解</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-fork"/></svg></div><h3>思维导图</h3><div class="desc">可交互导图，拖拽缩放、折叠展开，脉络一目了然</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-tags"/></svg></div><h3>关键词</h3><div class="desc">自动抽取 3–5 个核心关键词，快速定位主题</div></div>
-      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-book"/></svg></div><h3>原文对照</h3><div class="desc">摘要与原始 PDF 并排，结论可随时回原文核对</div></div>
+    <p class="sub-label reveal" style="margin-top:60px">四大功能 · 逐个看</p>
+
+    <!-- 1 搜索 -->
+    <div class="feat reveal">
+      <div class="feat-text">
+        <div class="feat-k">检索 · Search</div>
+        <h3>一句话<span class="grad">问出方向</span></h3>
+        <p>输入关键词、中文研究方向、或精确论文标题，自动改写为英文检索式，OpenAlex 智能选题、去重合并，arXiv 取全文。</p>
+        <ul class="fl">
+          <li><svg class="ic"><use href="#i-check"/></svg>中文 / 自然语言直接搜</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>精确标题秒中经典原文</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>同篇多版本自动去重合并</li>
+        </ul>
+      </div>
+      <div class="feat-demo" data-anim>
+        <div class="fd-bar"><svg class="ic"><use href="#i-search"/></svg>大模型如何减少幻觉</div>
+        <div class="fd-results">
+          <div class="fd-sel"></div>
+          <div class="fd-row"><span class="t">Survey of Hallucination in NLG</span><span class="b">arXiv</span></div>
+          <div class="fd-row"><span class="t">Retrieval-Augmented Generation for LLMs</span><span class="b">arXiv</span></div>
+          <div class="fd-row"><span class="t">SelfCheckGPT: Hallucination Detection</span><span class="b">arXiv</span></div>
+          <div class="fd-row"><span class="t">Chain-of-Verification Reduces Hallucination</span><span class="b">arXiv</span></div>
+        </div>
+      </div>
     </div>
-    <p class="sub-label reveal" style="margin-top:44px">应用场景</p>
-    <div class="g4">
-      <div class="card reveal"><div class="cic"><svg class="ic"><use href="#i-cap"/></svg></div><h3>科研调研</h3><div class="desc">调研周期从数周压缩到数天</div></div>
-      <div class="card reveal d1"><div class="cic"><svg class="ic"><use href="#i-pen"/></svg></div><h3>课程写作</h3><div class="desc">文献综述效率提升 3 倍</div></div>
-      <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-building"/></svg></div><h3>技术跟进</h3><div class="desc">10 分钟浏览一周前沿</div></div>
-      <div class="card reveal d3"><div class="cic"><svg class="ic"><use href="#i-lang"/></svg></div><h3>跨语言合作</h3><div class="desc">中英双语输出，降低语言门槛</div></div>
+
+    <!-- 2 摘要 -->
+    <div class="feat rev reveal">
+      <div class="feat-text">
+        <div class="feat-k">摘要 · Summary</div>
+        <h3>四维拆解，<span class="grad">一眼看懂</span></h3>
+        <p>DeepSeek 用 Map-Reduce 逐章节理解再汇总，输出一句话总结与「问题 / 方法 / 结果 / 贡献」四维结构化卡片。</p>
+        <ul class="fl">
+          <li><svg class="ic"><use href="#i-check"/></svg>一句话抓住核心</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>问题 / 方法 / 结果 / 贡献 四维</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>中英双语输出</li>
+        </ul>
+      </div>
+      <div class="feat-demo" data-anim>
+        <div class="fd-callout">一句话总结：用检索增强 + 生成后自我验证降低大模型幻觉，事实性显著提升。</div>
+        <div class="fd-grid">
+          <div class="fd-cell"><b>研究问题</b><span>大模型生成内容易出现事实性幻觉</span></div>
+          <div class="fd-cell"><b>方法</b><span>检索增强 + 生成后自我验证</span></div>
+          <div class="fd-cell"><b>结果</b><span>多基准事实性显著提升</span></div>
+          <div class="fd-cell"><b>主要贡献</b><span>低成本即插即用的降幻觉方案</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 思维导图 -->
+    <div class="feat reveal">
+      <div class="feat-text">
+        <div class="feat-k">思维导图 · Mindmap</div>
+        <h3>脉络<span class="grad">一图展开</span></h3>
+        <p>自动生成可交互思维导图，论文逻辑层层展开，支持拖拽平移、滚轮缩放、点击折叠，快速建立全局认知。</p>
+        <ul class="fl">
+          <li><svg class="ic"><use href="#i-check"/></svg>论文结构可视化</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>拖拽 / 缩放 / 折叠交互</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>一眼看清逻辑脉络</li>
+        </ul>
+      </div>
+      <div class="feat-demo" data-anim>
+        <svg class="fd-map" viewBox="0 0 300 200" aria-hidden="true">
+          <path class="lnk" d="M70 100 H120 V42 H158"/>
+          <path class="lnk" d="M70 100 H120 V81 H158"/>
+          <path class="lnk" d="M70 100 H120 V120 H158"/>
+          <path class="lnk" d="M70 100 H120 V159 H158"/>
+          <rect class="nd root" x="14" y="84" width="56" height="32" rx="7"/>
+          <text x="42" y="103" text-anchor="middle">降幻觉</text>
+          <rect class="nd" x="158" y="30" width="124" height="24" rx="6"/><text x="167" y="45">研究问题</text>
+          <rect class="nd" x="158" y="69" width="124" height="24" rx="6"/><text x="167" y="84">方法</text>
+          <rect class="nd" x="158" y="108" width="124" height="24" rx="6"/><text x="167" y="123">结果</text>
+          <rect class="nd" x="158" y="147" width="124" height="24" rx="6"/><text x="167" y="162">结论</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 4 单·双视图 -->
+    <div class="feat rev reveal">
+      <div class="feat-text">
+        <div class="feat-k">阅读视图 · View</div>
+        <h3>单视图与<span class="grad">原文对照</span></h3>
+        <p>一键在「单视图」与「PDF + 摘要」分屏之间切换；读摘要时随时调出原文，逐点核对结论。</p>
+        <ul class="fl">
+          <li><svg class="ic"><use href="#i-check"/></svg>单视图速览全文摘要</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>分屏 PDF + 摘要对照核对</li>
+          <li><svg class="ic"><use href="#i-check"/></svg>关键词在原文高亮定位</li>
+        </ul>
+      </div>
+      <div class="feat-demo" data-anim>
+        <div class="fd-tabs"><span class="fd-tab a">单视图</span><span class="fd-tab b">PDF + 摘要</span></div>
+        <div class="fd-stage">
+          <div class="fd-pane fd-pdf">PDF 原文<br><br>1 Introduction<br>……<br>3 Method<br>公式 (1)…<br>图 2…</div>
+          <div class="fd-pane fd-sum"><span class="lbl">结构化摘要</span>一句话总结 + 问题 / 方法 / 结果 / 贡献，可与左侧 PDF 原文逐点对照核对。</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -522,7 +714,7 @@
 
   // 基于滚动位置的导航高亮：nav 目标之间的小节归属到前一个 nav 项（不留空窗）
   const navLinks=[...document.querySelectorAll('.nav-a')];
-  const spySecs=['hero','catalogue','s2','perf','s5'].map(id=>document.getElementById(id)).filter(Boolean);
+  const spySecs=['hero','flow','s3','s4','perf','s5'].map(id=>document.getElementById(id)).filter(Boolean);
   function updateSpy(){
     const y=window.scrollY+window.innerHeight*0.35;
     let active=spySecs[0];
@@ -547,6 +739,21 @@
   }
   window.addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(onScroll);ticking=true;}},{passive:true});
   onScroll();
+
+  /* ===== Hero 标语打字动画 ===== */
+  (function(){
+    const el=document.getElementById('heroType'), caret=document.getElementById('heroCaret');
+    if(!el) return;
+    const TXT='从一下午到一分钟';
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      el.textContent=TXT; if(caret) caret.style.display='none'; return;
+    }
+    let i=0;
+    (function type(){
+      if(i<=TXT.length){ el.textContent=TXT.slice(0,i); i++; setTimeout(type,140); }
+      else { setTimeout(()=>{ if(caret) caret.style.display='none'; }, 1600); }
+    })();
+  })();
 
   /* ===== 自动播放的"操作录屏"演示 ===== */
   (function(){
@@ -611,6 +818,17 @@
       else { clear(); started=false; }
     }),{threshold:.3});
     dio.observe(frame);
+  })();
+
+  /* ===== 分功能动画：滚入视口才播放（移出暂停，省 CPU）===== */
+  (function(){
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // 降级=静态，不加 play
+    const demos=document.querySelectorAll('.feat-demo[data-anim]');
+    if(!demos.length) return;
+    const aio=new IntersectionObserver((es)=>es.forEach(e=>{
+      e.target.classList.toggle('play', e.isIntersecting);
+    }),{threshold:.3});
+    demos.forEach(el=>aio.observe(el));
   })();
 </script>
 </body>
