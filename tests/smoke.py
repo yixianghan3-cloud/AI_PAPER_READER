@@ -68,6 +68,13 @@ check("后处理 切出多章节", _doc and len(_doc["sections"]) >= 2)
 check("后处理 空正文→None", _assemble_doc("   ", "mineru") is None)
 check("批量 缺文件→None项", parse_pdfs(["/no/such/file.pdf"]) == [None])
 
+# 解析缓存：同篇不同命名（oa前缀/版本号/尾空格）归一到同一标题键，避免重复解析
+from agents.pdf_parser import _title_key
+_k = _title_key("2112.10752v2_High-Resolution Image Synthesis with Lat")
+check("缓存键 去 arXiv 版本号", _title_key("2112.10752_High-Resolution Image Synthesis with Lat") == _k)
+check("缓存键 去 oa_ 前缀",   _title_key("oa_c9df888b4a06_High-Resolution Image Synthesis with Lat") == _k)
+check("缓存键 去尾空格",      _title_key("2112.10752v2_High-Resolution Image Synthesis with Lat ") == _k)
+
 # ── 5. arXiv 标题兜底缓存：命中直接返回，不打网络 ──────────
 import agents.search_agent as SA
 

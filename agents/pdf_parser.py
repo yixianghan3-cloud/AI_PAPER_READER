@@ -179,19 +179,48 @@ def _cache_path(local_path: str) -> str:
     return os.path.splitext(local_path)[0] + ".md"
 
 
+# 文件名前缀：arXiv 号（可带 vN）或 oa_<hash>。用于剥掉前缀取标题部分。
+_ID_PREFIX_RE = re.compile(r"^(?:\d{4}\.\d{4,5}(?:v\d+)?|oa_[0-9a-f]+)_", re.IGNORECASE)
+
+
+def _title_key(stem: str) -> str:
+    """从 '<arXiv号 或 oa_hash>_<标题>' 取标题部分并归一化，作为同篇判定键。"""
+    s = _ID_PREFIX_RE.sub("", stem)
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def _find_paper_md(local_path: str) -> str:
+    """
+    精确同名 .md 找不到时，按「标题部分」在同目录找同一篇论文已有的 .md。
+    解决同篇论文因来源不同（OpenAlex oa_ 前缀 / arXiv 版本号 / 尾空格）落成
+    不同文件名，导致缓存 miss、白白重新解析的问题。
+    """
+    key = _title_key(os.path.splitext(os.path.basename(local_path))[0])
+    if not key:
+        return ""
+    for md in glob.glob(os.path.join(os.path.dirname(local_path), "*.md")):
+        if _title_key(os.path.splitext(os.path.basename(md))[0]) == key:
+            return md
+    return ""
+
+
 def _read_cache(local_path: str) -> str:
     """读取有效缓存的 MinerU 原始 md；无有效缓存返回 ""。"""
     if not MINERU_CACHE:
         return ""
     cache = _cache_path(local_path)
-    if not os.path.exists(cache):
-        return ""
-    # 若 PDF 比缓存还新（被重新下载过），缓存视为失效
-    try:
-        if os.path.getmtime(local_path) > os.path.getmtime(cache):
+    if os.path.exists(cache):
+        # 精确同名缓存：若 PDF 比它新（被重新下载过），视为失效
+        try:
+            if os.path.getmtime(local_path) > os.path.getmtime(cache):
+                return ""
+        except OSError:
+            pass
+    else:
+        # 精确同名 miss → 按标题找同篇已有 .md 复用（不同来源命名不同导致）
+        cache = _find_paper_md(local_path)
+        if not cache:
             return ""
-    except OSError:
-        pass
     try:
         with open(cache, "r", encoding="utf-8", errors="replace") as f:
             return f.read().strip()   # 空内容会被当作未命中，触发重新解析
