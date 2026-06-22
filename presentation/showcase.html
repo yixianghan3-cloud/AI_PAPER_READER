@@ -23,7 +23,8 @@
   svg.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em}
   .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
   .container{max-width:var(--maxw);margin:0 auto;width:100%}
-  section{padding:100px 48px;position:relative}
+  section{padding:90px 48px;position:relative;min-height:100vh;display:flex;align-items:center}
+  section>.container{width:100%}
   .alt-bg{background:linear-gradient(180deg,var(--bg),var(--bg2))}
   .cap{font-size:.8rem;letter-spacing:.26em;color:var(--mut);text-transform:uppercase;margin-bottom:14px}
 
@@ -477,10 +478,9 @@
       <div class="card reveal d2"><div class="cic"><svg class="ic"><use href="#i-zap"/></svg></div><h3>摘要 Map 章节级并发</h3><div class="desc">逐章节摘要改线程池并发，顺序严格保持，实测约 2.6× 提速；配合三层缓存热启动 0.4 秒。</div></div>
     </div>
     <div class="metrics reveal d2">
-      <div class="metric"><div class="v">100%</div><div class="k">搜索成功率</div></div>
-      <div class="metric"><div class="v">90s→0.4s</div><div class="k">解析加速比</div></div>
-      <div class="metric"><div class="v">0.42–0.56</div><div class="k">ROUGE-L 质量</div></div>
-      <div class="metric"><div class="v">86%</div><div class="k">章节识别准确率</div></div>
+      <div class="metric"><div class="v">90s→0.4s</div><div class="k">解析加速比（缓存）</div></div>
+      <div class="metric"><div class="v">2.6×</div><div class="k">摘要并发提速</div></div>
+      <div class="metric"><div class="v">3 层</div><div class="k">落盘缓存</div></div>
     </div>
   </div>
 </section>
