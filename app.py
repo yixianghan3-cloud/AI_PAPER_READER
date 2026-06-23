@@ -198,7 +198,7 @@ with st.sidebar:
         )
         st.divider()
         st.caption("关于")
-        st.caption("1–5 号位 · 某某课程 · 2026")
+        st.caption("1–5 号位 · 人工智能引论课程 · 2026")
 
     st.divider()
 

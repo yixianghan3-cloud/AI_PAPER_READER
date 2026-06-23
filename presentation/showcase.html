@@ -38,7 +38,7 @@
   .nav-links a:hover,.nav-links a.active{color:var(--ink)}
 
   /* 键盘焦点环（可访问性）：所有可聚焦元素可见焦点 */
-  a:focus-visible,.cat-card:focus-visible,.demo-frame:focus-visible{
+  a:focus-visible,.feat-demo:focus-visible{
     outline:2px solid var(--p1);outline-offset:3px;border-radius:8px}
   :focus:not(:focus-visible){outline:none}
 
@@ -65,20 +65,22 @@
   .pill{display:flex;align-items:center;gap:7px;border:1px solid var(--line);color:#cfccdf;font-size:.84rem;
         padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.03)}
   .pill svg.ic{font-size:1.05rem;color:var(--p1)}
+  .hero-repo{display:inline-flex;align-items:center;gap:8px;margin-top:26px;color:var(--mut);text-decoration:none;
+    font-size:.86rem;border:1px solid var(--line);padding:9px 17px;border-radius:999px;
+    background:rgba(255,255,255,.03);transition:border-color .25s,color .25s}
+  .hero-repo:hover{border-color:rgba(127,119,221,.5);color:var(--ink)}
+  .hero-repo svg.ic{font-size:1.1rem;color:var(--p1)}
+
+  /* 实机演示 GIF */
+  .gif-wrap{max-width:940px;margin:0 auto}
+  .gif-frame{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0c0d11;
+    box-shadow:0 50px 110px -50px rgba(127,119,221,.7),0 0 0 1px rgba(255,255,255,.02)}
+  .gif-frame img{display:block;width:100%;height:auto}
+  .gif-cap{text-align:center;color:var(--mut);font-size:.85rem;margin-top:16px}
 
   .sec-head{text-align:center;margin-bottom:52px}
   .sec-head h2{font-size:clamp(1.8rem,3.4vw,2.6rem);font-weight:600;letter-spacing:-.01em}
   .sub-label{text-align:center;font-size:.82rem;letter-spacing:.2em;color:var(--mut);text-transform:uppercase;margin:0 0 16px}
-
-  .cards-5{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
-  .cat-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px 18px;text-align:center;
-            cursor:pointer;transition:transform .3s,border-color .3s,background .3s;text-decoration:none;color:inherit;display:block}
-  .cat-card:hover{transform:translateY(-6px);border-color:rgba(127,119,221,.55);background:rgba(127,119,221,.08)}
-  .cat-ic{width:46px;height:46px;margin:0 auto 14px;border-radius:13px;background:rgba(127,119,221,.14);
-          display:flex;align-items:center;justify-content:center;color:var(--p1);font-size:1.45rem}
-  .cat-num{font-size:.74rem;color:var(--dim);letter-spacing:.16em;margin-bottom:6px}
-  .cat-title{font-size:1rem;font-weight:600}
-  .cat-en{font-size:.74rem;color:var(--mut);margin-top:3px}
 
   .flow{text-align:center}
   .pipe{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0}
@@ -103,8 +105,6 @@
 
   .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
   .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-  .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:22px;
         transition:transform .4s cubic-bezier(.16,1,.3,1),border-color .4s,background .4s}
   .card:hover{transform:translateY(-5px);border-color:rgba(127,119,221,.42);background:rgba(127,119,221,.05)}
@@ -128,98 +128,19 @@
   .closing .team{color:var(--mut);font-size:.86rem}
   .closing .tag{color:var(--dim);font-size:.78rem;margin-top:10px;letter-spacing:.1em}
   .footer{text-align:center;padding:34px;color:var(--dim);font-size:.76rem;border-top:1px solid var(--line)}
+  .footer .repo{display:inline-flex;align-items:center;gap:6px;margin-top:9px;color:var(--dim);
+    text-decoration:none;transition:color .2s}
+  .footer .repo:hover{color:var(--mut)}
+  .footer .repo svg.ic{font-size:.95rem}
 
   @media(max-width:980px){.pipe{flex-direction:column}.conn{width:2px;height:28px;transform:none}}
-  @media(max-width:920px){.cards-5,.g5{grid-template-columns:repeat(2,1fr)}.g3,.g4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:920px){.g3{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:760px){
     section{padding:66px 22px}
-    .g2,.g3,.g4,.g5,.cards-5{grid-template-columns:1fr}
+    .g2,.g3{grid-template-columns:1fr}
     .nav-links{gap:15px}.nav{padding:12px 18px}
   }
 
-  /* ===== 自动播放的"操作录屏"演示（模拟真实 app · 蓝紫红主题）===== */
-  .demo-wrap{max-width:900px;margin:0 auto 8px}
-  .demo-frame{
-    --da:#4285F4;--db:#9B72CB;--dc:#D96570;
-    --daGrad:linear-gradient(135deg,#4285F4,#9B72CB 50%,#D96570);
-    --daSurf:#1a1c20;--daBg:#0c0d11;--daLine:#2a2c32;--daInk:#f0f1f4;--daDim:#9aa0ac;
-    position:relative;border:1px solid var(--daLine);border-radius:14px;overflow:hidden;
-    background:var(--daBg);aspect-ratio:16/10;
-    box-shadow:0 50px 110px -50px rgba(127,119,221,.75),0 0 0 1px rgba(255,255,255,.02)}
-  .demo-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#15161c;border-bottom:1px solid var(--daLine)}
-  .demo-bar .dot{width:11px;height:11px;border-radius:50%}
-  .dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
-  .demo-url{margin-left:10px;font-size:.7rem;color:var(--daDim);background:#0c0d11;border:1px solid var(--daLine);
-    border-radius:7px;padding:3px 12px}
-  .demo-body{position:relative;height:calc(100% - 38px)}
-
-  .demo-land,.demo-run{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;gap:16px;opacity:0;transition:opacity .5s;pointer-events:none;padding:24px}
-  .demo-run{align-items:flex-start;padding-left:13%}
-  .demo-res{position:absolute;inset:0;display:grid;grid-template-columns:180px 1fr;opacity:0;transition:opacity .55s}
-  .demo-frame[data-phase="type"] .demo-land{opacity:1}
-  .demo-frame[data-phase="run"]  .demo-run {opacity:1}
-  .demo-frame[data-phase="result"] .demo-res{opacity:1}
-
-  .dl-title{font-size:1.8rem;font-weight:600;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .dl-sub{font-size:.74rem;color:var(--daDim);margin-top:-6px}
-  .dl-search{min-width:min(440px,82%);height:44px;border:1px solid var(--daLine);border-radius:11px;background:var(--daSurf);
-    display:flex;align-items:center;padding:0 16px;font-size:.9rem;color:var(--daInk)}
-  .dl-q{white-space:nowrap}
-  .dl-caret{width:1.5px;height:19px;background:var(--db);margin-left:2px;animation:dcar .9s step-end infinite}
-  @keyframes dcar{50%{opacity:0}}
-  .dl-go{background:var(--daGrad);color:#fff;font-size:.82rem;font-weight:600;padding:10px 30px;border-radius:10px;transition:transform .15s}
-  .dl-go.click{transform:scale(.92)}
-
-  .dr-title{font-size:1.05rem;font-weight:600;color:var(--daInk);margin-bottom:8px}
-  .dr-step{display:flex;align-items:center;gap:12px;font-size:.88rem;color:var(--daDim);opacity:.4;transition:opacity .4s,color .4s}
-  .dr-step .dr-ic{width:19px;height:19px;border-radius:50%;border:2px solid var(--daLine);position:relative;flex-shrink:0}
-  .dr-step.done{opacity:1;color:var(--daInk)}
-  .dr-step.done .dr-ic{border-color:var(--dc);background:var(--dc)}
-  .dr-step.done .dr-ic::after{content:"";position:absolute;left:5px;top:2px;width:4px;height:8px;
-    border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
-  .dr-step.active .dr-ic{border-color:var(--db);border-top-color:transparent;animation:dspin .7s linear infinite}
-  @keyframes dspin{to{transform:rotate(360deg)}}
-
-  .demo-side{background:#101116;border-right:1px solid var(--daLine);padding:13px 11px;overflow:hidden}
-  .ds-title{font-size:.82rem;font-weight:600;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .ds-meta{font-size:.64rem;color:var(--daDim);margin:3px 0 10px}
-  .ds-item{background:var(--daSurf);border:1px solid var(--daLine);border-radius:8px;padding:7px 9px;margin-bottom:7px;
-    opacity:0;transform:translateX(-12px);transition:opacity .4s,transform .4s}
-  .ds-item.in{opacity:1;transform:none}
-  .ds-item.sel{border-color:rgba(66,133,244,.6);background:linear-gradient(135deg,rgba(66,133,244,.16),rgba(155,114,203,.1))}
-  .ds-it-t{font-size:.66rem;color:var(--daInk);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .ds-it-b{display:inline-block;margin-top:5px;font-size:.55rem;color:#a8c7fa;background:rgba(66,133,244,.18);border-radius:99px;padding:1px 7px}
-
-  .demo-res-main{padding:15px 18px;overflow:hidden}
-  .rs-h{font-size:.96rem;font-weight:600;color:var(--daInk);line-height:1.3}
-  .rs-strip{height:2.5px;border-radius:99px;background:var(--daGrad);margin:9px 0 12px}
-  .rs-lbl{font-size:.68rem;font-weight:600;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:4px}
-  .rs-callout{font-size:.74rem;line-height:1.55;color:var(--daInk);
-    background:linear-gradient(135deg,rgba(66,133,244,.2),rgba(217,101,112,.08));
-    border:1px solid rgba(155,114,203,.3);border-radius:8px;padding:9px 11px;margin-bottom:12px}
-  .rs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-  .rs-cell{background:var(--daSurf);border:1px solid var(--daLine);border-radius:8px;padding:8px 9px}
-  .rs-cell b{display:block;font-size:.6rem;background:var(--daGrad);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px}
-  .rs-cell span{font-size:.63rem;color:#cfd2da;line-height:1.4}
-  .rs-chips{display:flex;gap:6px;flex-wrap:wrap}
-  .rs-chips i{font-style:normal;font-size:.62rem;color:#c8cdd5;border:1px solid var(--daLine);background:var(--daSurf);border-radius:99px;padding:3px 9px}
-  .demo-frame[data-phase="result"] .rs-reveal{animation:dup .5s both}
-  .rs-reveal.r1{animation-delay:.12s}.rs-reveal.r2{animation-delay:.26s}.rs-reveal.r3{animation-delay:.42s}.rs-reveal.r4{animation-delay:.58s}
-  @keyframes dup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-
-  .demo-cursor{position:absolute;width:19px;height:19px;left:46%;top:68%;z-index:6;pointer-events:none;
-    transition:left .85s cubic-bezier(.5,0,.2,1),top .85s cubic-bezier(.5,0,.2,1);filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
-  .demo-cursor svg{width:100%;height:100%}
-  .demo-cursor.click{animation:dclick .32s}
-  @keyframes dclick{45%{transform:scale(.78)}}
-  .demo-cap{text-align:center;color:var(--mut);font-size:.8rem;margin-top:16px}
-  .demo-cap b{color:#cfccdf;font-weight:500}
-
-  @media(max-width:640px){
-    .demo-res{grid-template-columns:1fr}.demo-side{display:none}
-    .rs-grid{grid-template-columns:1fr}.demo-run{padding-left:8%}
-  }
 
   /* ===== 分功能动画：交替大图行（每个功能一个动画）===== */
   #s4{--da:#4285F4;--db:#9B72CB;--dc:#D96570;--daGrad:linear-gradient(135deg,#4285F4,#9B72CB 50%,#D96570);
@@ -364,6 +285,7 @@
   <symbol id="i-building" viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v17"/><path d="M14 9h4a1 1 0 0 1 1 1v11"/><path d="M3 21h18"/><path d="M8 7h2M8 11h2M8 15h2"/></symbol>
   <symbol id="i-lang" viewBox="0 0 24 24"><path d="M4 5h7"/><path d="M7.5 5c0 3.5-2 6.5-4.5 8"/><path d="M5 9.5c0 2 2 4.2 5 5.3"/><path d="M12 20l4-9 4 9"/><path d="M13.4 17h5.2"/></symbol>
   <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M15.5 3.5a4.5 4.5 0 0 0-1.4 7.6L5 20.2 6.8 22l9.1-9.1a4.5 4.5 0 0 0 5.6-5.6l-2.7 2.7-2.8-.7-.7-2.8z"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 8.84 21.5c.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.1-1.47-1.1-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.69 0 3.84-2.34 4.69-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10 10 0 0 0 12 2z" fill="currentColor" stroke="none"/></symbol>
 </defs></svg>
 
 <div class="progress" id="progress"></div>
@@ -391,7 +313,12 @@
       <span class="pill"><svg class="ic"><use href="#i-cpu"/></svg>DeepSeek 摘要</span>
       <span class="pill"><svg class="ic"><use href="#i-fork"/></svg>思维导图</span>
     </div>
-    <div class="scrollcue reveal d4"><svg class="ic"><use href="#i-chevr"/></svg>向下滚动，开始探索</div>
+    <div class="reveal d4">
+      <a class="hero-repo" href="https://github.com/yixianghan3-cloud/AI_PAPER_READER" target="_blank" rel="noopener">
+        <svg class="ic"><use href="#i-github"/></svg>github.com/yixianghan3-cloud/AI_PAPER_READER
+      </a>
+    </div>
+    <div class="scrollcue reveal d5"><svg class="ic"><use href="#i-chevr"/></svg>向下滚动，开始探索</div>
   </div>
 </section>
 
@@ -434,6 +361,20 @@
         <div class="vs-bar"><i></i></div>
         <div class="vs-d">一句话进，结构化摘要 + 思维导图出</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- 实机演示（GIF 录屏）-->
+<section id="demo-gif">
+  <div class="container">
+    <div class="sec-head"><div class="cap reveal">实机演示</div><h2 class="reveal d1">一句话进，<span class="grad">摘要出</span></h2></div>
+    <div class="gif-wrap reveal d1">
+      <div class="gif-frame">
+        <img src="演示动画.gif" loading="lazy"
+             alt="AI Paper Reader 实际操作录屏：输入一句中文，自动检索、解析、生成结构化摘要与思维导图">
+      </div>
+      <p class="gif-cap">真实操作录屏 · 输入一句话 → 检索 → 解析 → 结构化摘要 + 思维导图</p>
     </div>
   </div>
 </section>
@@ -501,62 +442,7 @@
 <!-- 04 功能展示 -->
 <section id="s4">
   <div class="container">
-    <div class="sec-head"><div class="cap reveal">04 · 功能展示</div><h2 class="reveal d1">看它<span class="grad">跑起来</span></h2></div>
-
-    <!-- 自动播放的"操作录屏"：动画模拟真实 app 全流程 -->
-    <div class="demo-wrap reveal">
-      <div class="demo-frame" id="demoFrame" data-phase="type" role="img"
-           aria-label="演示：输入一句话 → 自动检索 5 篇论文 → 解析 → 生成结构化摘要">
-        <div class="demo-bar">
-          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-          <span class="demo-url">localhost:8501 · 论文摘要助手</span>
-        </div>
-        <div class="demo-body">
-          <!-- 着陆 / 输入 -->
-          <div class="demo-land">
-            <div class="dl-title">论文摘要助手</div>
-            <div class="dl-sub">AI 论文研究助手 · 检索 · 解析 · 摘要 · 思维导图</div>
-            <div class="dl-search"><span class="dl-q" id="dlQ"></span><span class="dl-caret"></span></div>
-            <div class="dl-go" id="dlGo">开始 →</div>
-          </div>
-          <!-- 运行 -->
-          <div class="demo-run">
-            <div class="dr-title">Pipeline 运行中…</div>
-            <div class="dr-step"><span class="dr-ic"></span>检索论文 · OpenAlex 智能选题</div>
-            <div class="dr-step"><span class="dr-ic"></span>解析 PDF · MinerU 批量解析</div>
-            <div class="dr-step"><span class="dr-ic"></span>生成摘要 · DeepSeek Map-Reduce</div>
-          </div>
-          <!-- 结果 -->
-          <div class="demo-res">
-            <aside class="demo-side">
-              <div class="ds-title">论文列表</div>
-              <div class="ds-meta">5 篇 · 摘要成功 5 · 0.4s</div>
-              <div class="ds-list" id="dsList"></div>
-            </aside>
-            <main class="demo-res-main">
-              <div class="rs-h rs-reveal r1">Informer: Beyond Efficient Transformer for Long Sequence Forecasting</div>
-              <div class="rs-strip rs-reveal r1"></div>
-              <div class="rs-lbl rs-reveal r2">一句话总结</div>
-              <div class="rs-callout rs-reveal r2">提出 Informer 模型，用 ProbSparse 自注意力、蒸馏与生成式解码，高效解决长序列时间序列预测。</div>
-              <div class="rs-grid">
-                <div class="rs-cell rs-reveal r3"><b>研究问题</b><span>长序列预测中 Transformer 的二次复杂度与高内存占用</span></div>
-                <div class="rs-cell rs-reveal r3"><b>方法</b><span>ProbSparse 注意力 + 自注意力蒸馏 + 生成式解码器</span></div>
-                <div class="rs-cell rs-reveal r4"><b>结果</b><span>四个大规模数据集上显著优于现有方法</span></div>
-                <div class="rs-cell rs-reveal r4"><b>主要贡献</b><span>首次将 Transformer 高效用于长序列预测</span></div>
-              </div>
-              <div class="rs-chips rs-reveal r4"><i>time series</i><i>transformer</i><i>forecasting</i><i>attention</i></div>
-            </main>
-          </div>
-          <!-- 假光标 -->
-          <div class="demo-cursor" id="demoCursor">
-            <svg viewBox="0 0 24 24" fill="#fff" stroke="#1a1a1a" stroke-width="1.4" stroke-linejoin="round"><path d="M5 3l4.5 16 2.4-6.6L18.5 10z"/></svg>
-          </div>
-        </div>
-      </div>
-      <p class="demo-cap reveal"><b>全自动流程</b> · 上面是动画模拟，真实操作同样一句话进、摘要出</p>
-    </div>
-
-    <p class="sub-label reveal" style="margin-top:60px">四大功能 · 逐个看</p>
+    <div class="sec-head"><div class="cap reveal">04 · 功能特色</div><h2 class="reveal d1">四大功能，<span class="grad">逐个看</span></h2></div>
 
     <!-- 1 搜索 -->
     <div class="feat reveal">
@@ -691,7 +577,13 @@
   </div>
 </section>
 
-<footer class="footer">AI Paper Reader · 学术论文智能摘要系统</footer>
+<footer class="footer">
+  AI Paper Reader · 学术论文智能摘要系统
+  <br>
+  <a class="repo" href="https://github.com/yixianghan3-cloud/AI_PAPER_READER" target="_blank" rel="noopener">
+    <svg class="ic"><use href="#i-github"/></svg>github.com/yixianghan3-cloud/AI_PAPER_READER
+  </a>
+</footer>
 
 <script>
   const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.15});
@@ -753,71 +645,6 @@
       if(i<=TXT.length){ el.textContent=TXT.slice(0,i); i++; setTimeout(type,140); }
       else { setTimeout(()=>{ if(caret) caret.style.display='none'; }, 1600); }
     })();
-  })();
-
-  /* ===== 自动播放的"操作录屏"演示 ===== */
-  (function(){
-    const frame=document.getElementById('demoFrame');
-    if(!frame) return;
-    const q=document.getElementById('dlQ'),
-          go=document.getElementById('dlGo'),
-          cursor=document.getElementById('demoCursor'),
-          list=document.getElementById('dsList'),
-          steps=frame.querySelectorAll('.dr-step');
-    const QUERY='我想了解大模型如何减少幻觉';
-    const PAPERS=[
-      ['Informer: Beyond Efficient Transformer for Long Sequence Forecasting','arXiv'],
-      ['Are Transformers Effective for Time Series Forecasting?','arXiv'],
-      ['TS2Vec: Towards Universal Representation of Time Series','arXiv'],
-      ['NHITS: Neural Hierarchical Interpolation for Forecasting','arXiv'],
-      ['iTransformer: Inverted Transformers for Forecasting','arXiv'],
-    ];
-    const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let timers=[];
-    const at=(fn,ms)=>timers.push(setTimeout(fn,ms));
-    const clear=()=>{timers.forEach(clearTimeout);timers=[];};
-    const move=(x,y)=>{cursor.style.left=x;cursor.style.top=y;};
-    function buildList(instant){
-      list.innerHTML='';
-      PAPERS.forEach((p,i)=>{
-        const el=document.createElement('div');
-        el.className='ds-item'+(i===0?' sel':'');
-        el.innerHTML='<div class="ds-it-t">'+p[0]+'</div><span class="ds-it-b">'+p[1]+'</span>';
-        list.appendChild(el);
-        if(instant) el.classList.add('in'); else at(()=>el.classList.add('in'),170*i);
-      });
-    }
-    function cycle(){
-      clear();
-      // 复位
-      frame.dataset.phase='type'; q.textContent=''; go.classList.remove('click');
-      steps.forEach(s=>s.classList.remove('done','active')); list.innerHTML='';
-      // 静态降级：直接给结果终态，不循环
-      if(reduce){ frame.dataset.phase='result'; buildList(true); move('22%','42%'); return; }
-      move('46%','70%');
-      at(()=>move('38%','46%'),600);                 // 光标移到搜索框
-      let i=0;
-      at(function type(){ if(i<=QUERY.length){ q.textContent=QUERY.slice(0,i); i++; at(type,118); } },1400);
-      const typeEnd=1400+QUERY.length*118+260;
-      at(()=>move('50%','66%'),typeEnd);             // 移到「开始」
-      at(()=>{cursor.classList.add('click');go.classList.add('click');},typeEnd+720);
-      at(()=>cursor.classList.remove('click'),typeEnd+1040);
-      const runStart=typeEnd+1180;
-      at(()=>{frame.dataset.phase='run';move('13%','42%');},runStart);
-      [0,1,2].forEach(k=>{
-        at(()=>steps[k].classList.add('active'),runStart+300+k*760);
-        at(()=>{steps[k].classList.remove('active');steps[k].classList.add('done');},runStart+300+k*760+700);
-      });
-      const resStart=runStart+300+3*760+450;
-      at(()=>{frame.dataset.phase='result';buildList(false);move('22%','40%');},resStart);
-      at(cycle,resStart+4600);                       // 停留后循环
-    }
-    let started=false;
-    const dio=new IntersectionObserver((es)=>es.forEach(e=>{
-      if(e.isIntersecting){ if(!started){started=true;cycle();} }
-      else { clear(); started=false; }
-    }),{threshold:.3});
-    dio.observe(frame);
   })();
 
   /* ===== 分功能动画：滚入视口才播放（移出暂停，省 CPU）===== */
