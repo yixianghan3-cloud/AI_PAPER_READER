@@ -52,14 +52,53 @@
 
 ## 🔄 工作原理
 
-| 步骤 | 做什么 | 模块 |
-|------|--------|------|
-| 1. 查询改写 | 自然语言/中文 → 英文检索词（可选） | `agents/query_rewriter.py` |
-| 2. 智能选题 | OpenAlex 相关性+引用排序，去重合并，自动定篇数 | `agents/openalex_agent.py` |
-| 3. 取全文 | arXiv 直链下载；下不动则标题回查 arXiv 兜底；再不行用摘要兜底 | `agents/search_agent.py` |
-| 4. 解析 | MinerU 把 PDF 转结构化 Markdown（多篇批量，模型只装一次） | `agents/pdf_parser.py` |
-| 5. 摘要 | DeepSeek + Map-Reduce，结构化摘要 + 关键词 + 思维导图 | `agents/llm_agent.py` |
-| 6. 展示 | Streamlit 多视图，单视图 / PDF 对照两种模式 | `app.py` / `components/` |
+一句话进来，由 `app.py` 统一编排，依次流过五个模块。每个模块按**接口契约**解耦，可独立替换或 mock。
+
+### 流水线
+
+```
+输入：关键词 / 中文研究方向 / 论文标题
+  ↓  ① 查询改写        中文/自然语言 → 英文检索词（精确标题原样保留）
+  ↓  ② 智能选题        相关性+引用排序 → 去重合并 → 按意图自动定篇数
+  ↓  ③ 取全文          arXiv 直链；下不动→标题回查 arXiv 兜底；再不行→摘要兜底
+  ↓  ④ PDF 解析        MinerU 批量解析（多篇模型只装载一次）→ 结构化 Markdown
+  ↓  ⑤ AI 摘要         DeepSeek Map-Reduce（章节级并发）→ 摘要 + 关键词 + 思维导图
+  ↓  ⑥ 多视图展示      Streamlit：单视图（4 tab）/ PDF 原文对照
+```
+
+### 分步说明（含关键设计）
+
+| 步骤 | 模块 | 做什么 · 关键设计 |
+|------|------|------|
+| ① 查询改写 | `query_rewriter.py` | 中文/自然语言 → 英文检索词；**干净英文或精确标题原样保留**，避免被改散；任何失败兜底返回原文，不阻断检索 |
+| ② 智能选题 | `openalex_agent.py` | OpenAlex 相关性 + 引用（`smart` 排序）；**同一篇的预印本/正式版自动去重合并**，优选 arXiv 直链；按查询意图**自动定篇数** |
+| ③ 取全文 | `search_agent.py` | 来源优先级 OpenAlex > arXiv；arXiv 直链下载；**出版商链（如 AAAI）下不动 → 用标题回查 arXiv 兜底**（落盘缓存 / 快速失败 / 反爬域名黑名单）；都拿不到 → 摘要兜底 |
+| ④ 解析 | `pdf_parser.py` | MinerU `pipeline` 后端；**多篇合并为一次目录模式调用，模型只装载一次**，批量失败自动回退逐篇；md 缓存按标题归一，同篇不同命名也复用 |
+| ⑤ 摘要 | `llm_agent.py` | DeepSeek **Map-Reduce**：Map 逐章节小结（**线程池并发 ~2.6×**，顺序严格保持），Reduce 合并出结构化 JSON；带 system 提示词 |
+| ⑥ 展示 | `app.py` · `components/` | Streamlit 单视图（摘要/思维导图/关键词/原始 PDF 四 tab）与 PDF 对照两种模式；标注**全文来源**；ECharts 可交互思维导图 |
+
+> 整条流水线：`search_papers() → parse_pdfs() → summarize_paper() → UI 展示`
+
+### 三个底层设计
+
+- **契约门面层（`contracts/`）** —— 每个契约顶部一个 `USE_MOCK` 开关：`False` 用真实现，`True` 用 Mock 假数据。`app.py` 只认契约，切换实现不动主程序，五人并行开发互不阻塞。
+- **三条并行列表** —— `papers / parsed_list / summaries` 在 `session_state` 中**同序对齐**，下标 `i` 永远指同一篇；`selected_idx` 决定展示哪篇、`view_mode` 决定哪种视图，切换都不重跑流水线。
+- **三层缓存** —— 检索 / 解析 / 摘要各自落盘，冷启动慢、**热启动 ~0.4 秒**；演示前预热好，断网也能出结果。
+
+### 关键特性 · 实现逻辑
+
+> 「功能特性」是卖点，这里讲**怎么实现的**（含关键函数，便于查阅）。
+
+| 特性 | 实现逻辑 |
+|------|---------|
+| **中文 / 自然语言检索** | `query_rewriter.rewrite_query()`：把规则放进 **system 提示词**（身份+纪律），中文→英文检索词；新增两条规则——干净英文或精确标题**原样返回**、句中点名某论文则**提取其标题**；任何异常兜底返回原文 |
+| **智能选题 + 去重合并** | `openalex_agent`：`smart` 排序＝相关候选内按引用重排；`_dedup_merge()` 按**归一化标题**把预印本/正式版合并成一条——`citation_count` 取最大、`pdf_url` 按 `_pdf_rank()`（arXiv 直链 > 普通 > 反爬域名）优选 |
+| **arXiv 标题兜底** | `search_agent._arxiv_pdf_by_title()`：下载失败时用 `ti:"标题"` 搜 arXiv，**Jaccard≥0.8 相似度校验**防下错；结果落盘 `arxiv_title_map.json`（含负缓存）；用短超时/1 次重试**快速失败**；`_BLOCKED_PDF_HOSTS` 反爬域名**跳过首次下载** |
+| **按意图自动定篇数** | `search_agent.suggest_max_results()`：**规则启发式**，从「含中文 / 冒号 / 词数 / 首字母大写词数」判定是「精确标题」还是「宽泛话题」→ 返回 2 / 4 / 5；在**查询改写之前**用原始 query 判定（最忠实意图） |
+| **MinerU 批量解析** | `pdf_parser.parse_pdfs()`：未命中缓存的暂存为 `doc{idx}.pdf` → **一次 `mineru -p <目录>`**（目录模式，模型只装一次）→ 按 idx 回映射；整批失败 `except` 回退逐篇 `parse_pdf()` |
+| **解析缓存归一复用** | `pdf_parser._title_key()`：剥掉文件名里的 id 前缀（`oa_…` / `2012.07436v3`）与尾空格，按标题找同一篇已有的 `.md`，**同篇不同命名也复用**，不重复解析 |
+| **摘要 Map 章节级并发** | `llm_agent.summarize_paper()`：Map 阶段用 `ThreadPoolExecutor`，**`executor.map` 按输入序返回**（对应 Reduce 的 `[1][2]` 编号）；`MAP_CONCURRENCY` 有界以尊重限流；实测约 2.6× |
+| **全文来源标注** | `views.fulltext_source()`：从 `pdf_url` 推断「arXiv / 出版商名 / 仅摘要」（解析降级为 `fallback-abstract` 时标"仅摘要"），不占用契约字段 |
 
 ---
 
